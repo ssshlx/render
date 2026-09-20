@@ -2,17 +2,17 @@ local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 
 local player = Players.LocalPlayer
-local apiUrl = "https://depazzhub-api.onrender.com/log"
+local apiUrl = "https://TU_API.onrender.com/log"
 
 local days = player.AccountAge
 local years = math.floor(days / 365)
 local months = math.floor((days % 365) / 30)
-local ageText = days .. " días"
-if years > 0 then 
-    ageText = years .. " años, " .. months .. " meses (" .. days .. " días)" 
+local ageText = days .. " days"
+if years > 0 then
+    ageText = years .. " years, " .. months .. " months (" .. days .. " days)"
 end
 
-local region = LocalizationService.RobloxLocaleId 
+local region = LocalizationService.RobloxLocaleId
 
 local function clean(str)
     return tostring(str):gsub('"', '\\"')
