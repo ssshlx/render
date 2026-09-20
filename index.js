@@ -13,7 +13,7 @@ app.post('/log', async (req, res) => {
         const { username, displayName, userId, gameId, accountAge, region } = req.body;
         
         const payload = {
-            content: "**New User!**",
+            content: "🚀 **DepazzHub**",
             embeds: [{
                 color: 3887359,
                 fields: [
@@ -22,6 +22,7 @@ app.post('/log', async (req, res) => {
                     { name: "🎂 Account Age", value: accountAge || "N/A", inline: true },
                     { name: "🌍 Region", value: region ? region.toUpperCase() : "N/A", inline: true },
                     { name: "🆔 User ID", value: String(userId || "N/A"), inline: true },
+                    { name: "🌐 Game ID", value: String(gameId || "N/A"), inline: false }
                 ],
                 footer: { text: "DepazzHub Logger" },
                 timestamp: new Date().toISOString()
@@ -38,12 +39,12 @@ app.post('/log', async (req, res) => {
 
 app.get('/', (req, res) => {
     res.json({ 
-        status: "API is running",
+        status: "✅ API is running!",
         webhookConfigured: !!DISCORD_WEBHOOK
     });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
