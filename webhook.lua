@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 
 local player = Players.LocalPlayer
-local apiUrl = "https://TU_API.onrender.com/log"
+local apiUrl = "https://depazzhub-api.onrender.com/log"
 
 local days = player.AccountAge
 local years = math.floor(days / 365)
