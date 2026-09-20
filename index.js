@@ -22,7 +22,7 @@ app.post('/log', async (req, res) => {
         }
         
         const payload = {
-            content: "🚀 **testb**",
+            content: "**NEW USER!**",
             embeds: [{
                 color: 3887359,
                 fields: [
