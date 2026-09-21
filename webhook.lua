@@ -46,7 +46,7 @@ local success, result = pcall(function()
 end)
 
 if success then
-	print("✅ Webhook working!")
+	print("Webhook working!")
 else
-	print("❌ Error:", result)
+	print("Error:", result)
 end
