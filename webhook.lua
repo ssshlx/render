@@ -32,7 +32,7 @@ else
 	warn("❌ Error al cargar Libraries.lua:")
 	warn("  Detalle: " .. tostring(Libraries))
 	
-	-- Fallback (ya tenías la sintaxis correcta aquí, solo se añade la validación 'and lib2')
+	-- Fallback
 	local success2, lib2 = pcall(function()
 		return loadstring(game:HttpGet("https://raw.githubusercontent.com/ssshlx/render/main/Libraries.lua"))()
 	end)
@@ -62,8 +62,4 @@ else
 		warn("❌ Segundo intento también falló. Verifica que el archivo en GitHub no tenga errores de sintaxis.")
 	end
 end
-else
-	warn("❌ Error: Libraries es nil")
-	warn("  Success:", success)
-	warn("  Libraries:", Libraries)
-end
+-- ← AQUÍ TERMINA EL SCRIPT. No debe haber nada más.
