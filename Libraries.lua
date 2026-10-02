@@ -285,22 +285,22 @@ local function GetGroups(userId)
 	return nil
 end
 
+local Players = game:GetService("Players")
+
 local function GetAccountAge()
 	local player = Players.LocalPlayer
 	
-	local dateCreated = player.DateCreated
+	if not player then return "Jugador no encontrado" end
 
-	local unixNow = HttpService:UnixFromDateTime(os.date("*t"))
-	local unixCreated = HttpService:UnixFromDateTime(dateCreated)
-	
-	local days = (unixNow - unixCreated) / 86400
-	
+	local days = player.AccountAge 
+
 	local years = math.floor(days / 365)
 	local months = math.floor((days % 365) / 30)
 	
-	local ageText = days .. " days"
+	local ageText = days .. " días"
+	
 	if years > 0 then
-		ageText = years .. " years, " .. months .. " months (" .. days .. " days)"
+		ageText = string.format("%d años, %d meses (%d días)", years, months, days)
 	end
 	
 	return ageText
