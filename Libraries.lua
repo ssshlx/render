@@ -92,11 +92,17 @@ local function EscapeJson(str)
 		return "nil"
 	end
 	local s = tostring(str)
-	s = string.gsub(s, '\\', '\\\\')
-	s = string.gsub(s, '"', '\\"')
-	s = string.gsub(s, '\n', '\\n')
-	s = string.gsub(s, '\r', '\\r')
-	s = string.gsub(s, '\t', '\\t')
+	local backslash = string.char(92)  -- \
+	local quote = string.char(34)       -- "
+	local newline = string.char(10)     -- \n
+	local carriage = string.char(13)    -- \r
+	local tab = string.char(9)          -- \t
+	
+	s = string.gsub(s, backslash, backslash .. backslash)
+	s = string.gsub(s, quote, backslash .. quote)
+	s = string.gsub(s, newline, backslash .. "n")
+	s = string.gsub(s, carriage, backslash .. "r")
+	s = string.gsub(s, tab, backslash .. "t")
 	return s
 end
 
