@@ -91,24 +91,6 @@ const request = {
     
     delete: async (url, options = {}) => {
         return await this.get(url, options);
-    },
-    
-    putJson: async (url, body, options = {}) => {
-        return await this.post(url, body, {
-            headers: {
-                ...options.headers,
-                "Content-Type": "application/json"
-            }
-        });
-    },
-    
-    postJson: async (url, body, options = {}) => {
-        return await this.post(url, body, {
-            headers: {
-                ...options.headers,
-                "Content-Type": "application/json"
-            }
-        });
     }
 };
 
