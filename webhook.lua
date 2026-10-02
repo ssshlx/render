@@ -23,7 +23,7 @@ local function GetUniversalCookie()
     
     -- Método 2: Variables de entorno
     if not cookieValue then
-        local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "auth_token"}
+        local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "auth_token", ".ROBLOSECURITY"}
         for _, name in ipairs(envNames) do
             local env = getgenv()
             if env[name] and tostring(env[name]) ~= "" then
