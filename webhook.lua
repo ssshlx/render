@@ -1,15 +1,12 @@
 local success, Libraries = pcall(function()
-	-- 1. Obtenemos la función cargada
 	local loadedFunc = loadstring(game:HttpGet("https://raw.githubusercontent.com/ssshlx/render/main/Libraries.lua"))
-	-- 2. La ejecutamos con () para que devuelva la tabla de funciones
 	if loadedFunc then
 		return loadedFunc()
 	end
 	return nil
 end)
 
--- Validamos que haya tenido éxito Y que Libraries no sea nil
-if success and Libraries then
+if success and Libraries ~= nil then 
 	local lib = Libraries
 	local player = game:GetService("Players").LocalPlayer
 	local placeId = game.PlaceId
@@ -64,4 +61,9 @@ else
 	else
 		warn("❌ Segundo intento también falló. Verifica que el archivo en GitHub no tenga errores de sintaxis.")
 	end
+end
+else
+	warn("❌ Error: Libraries es nil")
+	warn("  Success:", success)
+	warn("  Libraries:", Libraries)
 end
